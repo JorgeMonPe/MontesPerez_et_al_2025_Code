@@ -1001,7 +1001,6 @@ data <- data %>% filter(TimeOfDay == "Day")
   Tabla_Results <- Tabla_Results %>% arrange(Naturalization, Category) %>% 
     relocate(Naturalization, Category, Var, pvalue, Mean, Sd, Median, Q1, Q3, Min, Max)
   
-  write_csv(Tabla_Results, "Table_allvars_results.csv")
 ```
 
 ## Table S1
