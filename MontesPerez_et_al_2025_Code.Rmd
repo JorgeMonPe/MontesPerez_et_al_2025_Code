@@ -1,0 +1,1023 @@
+---
+title: "Impact of Naturalization on Greenhouse Gas Dynamics in Artificial Urban Ponds"
+author: "Jorge Montes Pérez"
+date: "2025-03-05"
+output:
+  html_document:
+    theme: simplex
+    toc: true
+    toc_depth: 4
+    toc_float: 
+      collapsed: false
+      smooth_scroll: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+# Introduction
+
+This is the code used to generated results and plots presented in ---- research article.
+
+# Download data from EDI repository
+
+
+
+# Reproduce results
+
+## AUP features
+
+```{r AUP library}
+#library
+library(tidyverse)
+library(ggpubr)
+library(broom)
+library(errors)
+library(factoextra)
+library(gridExtra)
+library(ggfortify)
+```
+
+```{r AUP PCA}
+#Import data
+  data <- read_csv("rawdata/Data_for_repository.csv")
+  
+#Select variables for PCA
+  #Just day time measurements
+    day <- data %>% filter(TimeOfDay == "Day")
+    #Remove categorical vars and latitude and longitude
+    data_PCA <- day %>% select(-c("Latitude","Longitude", "Pond_name", "Pond_code", "Season","TimeOfDay", "Date", "Naturalization"))
+    
+  
+#When I have NAs, it is because the values were below the detection limit ~ 0
+  data_PCA <- data_PCA %>% mutate(across(everything(), ~replace_na(., 0)))
+  
+#Transform data_PCA
+  #How I have 0's in my data_PCA, I'm using an approach adding a very low concentration. In this case, I will add the half of the minimum values I get.
+  minvalues <- data_PCA %>% summarise(across(where(is.numeric), ~min(.[.>0],na.rm = T)))
+  data_PCA <- data_PCA %>% full_join(minvalues)
+  
+  data_PCA <- data_PCA  %>% mutate(across(where(is.numeric), ~case_when(. == 0 ~ last(.)/2,
+                                                                        TRUE ~ .)))
+  data_PCA <- data_PCA %>% mutate(across(where(is.numeric), log))
+  data_PCA <- data_PCA[-length(data_PCA$Temp_C),]
+
+#I remove dissolved oxygen because is already include in %
+  data_PCA <- data_PCA %>% select(-c(DO_mgL))
+  #I add depth
+  data_PCA <- data_PCA %>% mutate(Depth = volume_m3/Surface_m2)
+  #Remove GHG 
+  data_PCA <- data_PCA %>% select(-c(CO2_uatm, CH4_uatm, N2O_uatm))
+  #Rename variable for plotting PCA
+  data_PCA <- data_PCA %>% rename(TP = TP_mgL,
+                                  TDN = TDN_mgL,
+                                  Cl = Cl_mgL,
+                                  DOC = DOC_mgL,
+                                  SO4 = SO4_mgL,
+                                  NO3 = NO3_mgL,
+                                  `Chl-a` = Chla_ugL,
+                                  Pheopigments = Pheo_ugL,
+                                  SurfaceVegetation = Perc_SurfaceCover,
+                                  SubmergedVegetation = Perc_SubsurfaceCover,
+                                  DO = DO_perc,
+                                  Volume = volume_m3,
+                                  Surface = Surface_m2,
+                                  Temperature = Temp_C,
+                                  Si = Si_ppm,
+                                  Mg = Mg_ppm,
+                                  Mn = Mn_ppb,
+                                  S = S_ppm,
+                                  Sr = Sr_ppm,
+                                  Na = Na_ppm,
+                                  Conductivity = Conductivity_uScm,
+                                  K = K_ppm,
+                                  Fe = Fe_ppb,
+                                  Ca = Ca_ppm)
+  #PCA
+  pca_todo <- data_PCA %>% prcomp(., scale = TRUE)
+```
+
+### Figure 2
+
+```{r}
+  #Firsts two components
+  plot_PC1_PC2 <- autoplot(pca_todo, x=1, y = 2, data = day, fill = "Naturalization", shape = 21, size = 3,
+                           loadings = TRUE, loadings.colour = 'gray',
+                           loadings.label = TRUE, loadings.label.size = 3, loadings.label.colour = "black",
+                           loadings.label.repel=T)+
+    scale_fill_manual(values = c("#99ccff","#739900"))+
+    theme_linedraw(base_size = 12)+
+    theme(legend.position = "bottom")
+  plot_PC1_PC2
+  ggsave("Figure_2.png", width = 15, height = 15, units = "cm")
+```
+
+
+## GHG partial pressures
+
+```{r GHG library}
+#Library
+  library(tidyverse)
+  library(errors)
+  library(rstatix)
+  library(car)
+  library(emmeans)
+  library(ggResidpanel)
+  library(lme4)
+  library(lmerTest)
+```
+
+```{r}
+#Import data
+data <- read_csv("rawdata/Data_for_repository.csv")
+  
+  #Day data
+  data <- data %>% filter(TimeOfDay == "Day")
+  #Select GHGs data
+  data <- data %>% select(Pond_name, Pond_code, Season, TimeOfDay, Naturalization, Date, CH4_uatm, CO2_uatm, N2O_uatm)
+  
+```
+
+### Main effects
+```{r GHG ANOVA, results='hide'}
+##ANOVA====
+  ##Assumptions====
+  #- No significant outliers, normality, Homogeneity of variance
+  #Identify outliers
+  data_trans <- data %>% mutate(across(c(CH4_uatm, CO2_uatm, N2O_uatm), ~log(.)))
+  data_trans %>% group_by(Naturalization, Season) %>% identify_outliers(CH4_uatm) %>% filter(is.extreme == "TRUE")
+  data_trans %>% group_by(Naturalization, Season) %>% identify_outliers(CO2_uatm) %>% filter(is.extreme == "TRUE")
+  data_trans %>% group_by(Naturalization, Season) %>% identify_outliers(N2O_uatm) %>% filter(is.extreme == "TRUE")
+  
+  #Checking normality
+  data_trans %>% group_by(Naturalization, Season) %>% shapiro_test(CH4_uatm)
+  data_trans %>% group_by(Naturalization, Season) %>% shapiro_test(CO2_uatm)
+  data_trans %>% group_by(Naturalization, Season) %>% shapiro_test(N2O_uatm)
+  
+  #Check homogeneity
+  data_trans %>%
+    group_by(Season) %>%
+    levene_test(CH4_uatm ~ Naturalization)
+  data_trans %>%
+    group_by(Season) %>%
+    levene_test(CO2_uatm ~ Naturalization)
+  data_trans %>%
+    group_by(Season) %>%
+    levene_test(N2O_uatm ~ Naturalization)
+
+##Perform the ANOVA====  
+  ##ANOVA TWO-FACTORS repeated measurements
+  data_trans <- data_trans %>% mutate(Pond_name = as.factor(Pond_name))
+  ##CH4
+  res.aov_CH4 <- anova_test(data = data_trans, dv = CH4_uatm, wid = Pond_name, between = Naturalization, within = Season)
+  get_anova_table(res.aov_CH4)
+  #CO2
+  res.aov_CO2 <- anova_test(data = data_trans, dv = CO2_uatm, wid = Pond_name, between = Naturalization, within = Season)
+  get_anova_table(res.aov_CO2)
+  
+##Non parametric test for N2O====
+  #Linear mixed models
+  data_trans <- data_trans %>% mutate(Naturalization = as.factor(Naturalization), Season = as.factor(Season))
+  
+  #N2O  
+  model <- lmer(N2O_uatm ~ Naturalization * Season + (1 | Pond_name), data = data_trans)
+  resid_panel(model)
+  summary(model)
+  anova(model, ddf = "Kenward-Roger")
+  Posthoc_N2O <- emmeans(model, specs = c("Naturalization", "Season"))
+  intervals <- contrast(Posthoc_N2O, method = "pairwise", adjust = "tukey")
+  intervals_pairwise_N2O <- confint(intervals)
+  Posthoc_N2O <- pairs(Posthoc_N2O, adjust = "tukey") %>% as_data_frame()
+  
+
+```
+
+#### ANOVA tables
+
+```{r ANOVA table}
+  print("CO2")
+  print(res.aov_CO2)
+  print("CH4")
+  print(res.aov_CH4)
+  print("N2O")
+  print(anova(model, ddf = "Kenward-Roger"))
+```
+
+### Posthoc test
+```{r GHG Posthoc}
+##Post-hoc tests====
+    #TUKEY
+  Pond_name <- factor(data_trans$Pond_name)
+  Season <- factor(data_trans$Season)
+  Naturalization <- factor(data_trans$Naturalization)
+  CH4_uatm <- data_trans$CH4_uatm
+  tukey_CH4 <- tukey_hsd(res.aov_CH4, CH4_uatm ~ Season*Naturalization)
+  CO2_uatm <- data_trans$CO2_uatm
+  tukey_CO2 <- tukey_hsd(res.aov_CO2, CO2_uatm ~ Season*Naturalization)
+
+  #Export
+  print("CH4")
+  print(tukey_CH4)
+  print("N2O")
+  print(intervals_pairwise_N2O)
+```
+  
+### Figure 3
+```{r GHG plot}
+###==========Letters for plotting===========================
+  library(multcompView)
+  ##CO2
+  tukey_df <- tukey_CO2[3:8,] %>%
+    select(group1, group2, p.adj) %>%
+    arrange(p.adj)
+  
+  pvalues <- tukey_df$p.adj
+  names(pvalues) <- paste(tukey_df$group1, tukey_df$group2, sep = "-")
+  
+  # Letters for comparison
+  letters <- multcompLetters(pvalues)
+  letters_CO2 <- data.frame(
+    Combination = names(letters$Letters), 
+    Letters = letters$Letters,
+    variable = "CO2_uatm"
+  )
+  
+  ##CH4
+  tukey_df <- tukey_CH4[3:8,] %>%
+    select(group1, group2, p.adj) %>%
+    arrange(p.adj)
+  
+  pvalues <- tukey_df$p.adj
+  names(pvalues) <- paste(tukey_df$group1, tukey_df$group2, sep = "-")
+  
+  #Letters
+  letters <- multcompLetters(pvalues)
+  letters_CH4 <- data.frame(
+    Combination = names(letters$Letters), 
+    Letters = letters$Letters,
+    variable = "CH4_uatm"
+  )
+  
+  ##N2O
+  pvalues <- Posthoc_N2O$p.value
+  factores <- Posthoc_N2O$contrast
+  factores <- str_split_fixed(factores, " - ", 2) %>% as.data.frame()
+  factores <-factores %>% separate_wider_delim(V1, delim = " ", names = c("V1_Naturalization", "V1_Season"))
+  factores <-factores %>% separate_wider_delim(V2, delim = " ", names = c("V2_Naturalization", "V2_Season"))
+  
+  #Similar format than CO2 and CH4
+  factores <- factores %>% mutate(Reconstruido = paste(paste(V1_Season, V1_Naturalization, sep = ":"), paste(V2_Season, V2_Naturalization, sep = ":"), sep = "-"))
+  
+  names(pvalues) <- factores$Reconstruido
+  
+  #Letters
+  letters <- multcompLetters(pvalues)
+  letters_N2O <- data.frame(
+    Combination = names(letters$Letters), 
+    Letters = letters$Letters,
+    variable = "N2O_uatm"
+  )  
+  #Join all letter df
+  letters <- letters_CO2 %>% bind_rows(letters_CH4) %>% bind_rows(letters_N2O)
+  
+  #Df letter and combinations
+  data_comb <- data %>%
+    mutate(Combination = paste(Season, Naturalization, sep = ":")) 
+  
+##Join letter for plotting
+  #long format
+  data_l <- data_comb %>%  pivot_longer(-c(Pond_name, Pond_code, Season, TimeOfDay, Naturalization, Date, Combination), names_to = "variable", values_to = "uatm")
+  
+  #Join with letters
+  data_l <- data_l %>% left_join(letters)
+  
+  #I add atmosphere references values
+  data_l <- data_l %>% mutate(Atm_ref = case_when(variable == "CH4_uatm" ~ 1.92026,
+                                                  variable == "CO2_uatm" ~ 424,
+                                                  variable == "N2O_uatm" ~ 0.33653))
+  #Label position en y
+  data_l <- data_l %>% group_by(Season, variable) %>% 
+    mutate(label_y = max(uatm, na.rm = T)) %>% 
+    ungroup()
+  
+  #reorder variables
+  data_l <- data_l %>% mutate(variable = fct_relevel(variable, "CO2_uatm"))
+  
+##-------------PLOT - LOG SCALE Y-AXIS-----------------
+  ggplot(data_l, aes(x = Season, y = uatm, fill = Naturalization))+
+    geom_violin(trim = F)+
+    geom_text(aes(label = Letters, y = label_y), position = position_dodge(width = 0.8), vjust = -5) +
+    geom_jitter(alpha = 0.4,position=position_jitterdodge(), shape = 21)+
+    geom_hline(aes(yintercept = Atm_ref, linetype = "Atmosphere ref (NOAA, 2023)"))+
+    scale_linetype_manual(values = 2)+
+    scale_fill_manual(values = c("#99ccff","#739900"))+
+    scale_y_log10(expand = expansion(mult = c(0.1, 0.2)), labels = scales::label_number(accuracy = 1, big.mark = ","))+
+    labs(x = "Naturalization", y = expression(paste("Partial pressure (", mu, "atm)")), linetype = NULL)+
+    facet_wrap(~variable, scales = "free", labeller = as_labeller(c(CH4_uatm = "CH[4]", CO2_uatm = "CO[2]", N2O_uatm = "N[2]*O"), default = label_parsed))+
+    theme_bw(base_size = 12)+
+    theme(legend.position = "bottom", text = element_text(family = "Helvetica"))
+  ggsave("Figure_3.png", width = 16, height = 10, units = "cm")
+```
+
+### Summary
+
+```{r}
+##Summary
+  data_l %>% drop_errors() %>% group_by(variable) %>% 
+    summarise(Median = median(uatm, na.rm = T),
+              Min = min(uatm, na.rm = T),
+              Max = max(uatm, na.rm = T),
+              Q1 = quantile(uatm, na.rm = T, probs = 0.25),
+              Q3 = quantile(uatm, na.rm = T, probs = 0.75),
+              IQR = IQR(uatm, na.rm = T))
+  
+  #Per group
+  data_l %>% drop_errors() %>% group_by(variable, Naturalization, Season) %>%
+    summarise(Median = median(uatm, na.rm = T),
+              Min = min(uatm, na.rm = T),
+              Max = max(uatm, na.rm = T),
+              Q1 = quantile(uatm, na.rm = T, probs = 0.25),
+              Q3 = quantile(uatm, na.rm = T, probs = 0.75),
+              IQR = IQR(uatm, na.rm = T))
+```
+
+
+## Diel changes
+
+```{r}
+###Library====
+library(tidyverse)
+library(errors)
+library(ggpubr)
+library(rstatix)
+library(car)
+library(lmerTest)
+library(ggpubr)
+
+#Import data
+data <- read_csv("rawdata/Data_for_repository.csv")
+
+#Ponds sampled at night
+night <- data %>% filter(TimeOfDay == "Night")
+#Select all information for these ponds
+data <- data %>% filter(Pond_code %in% night$Pond_code)
+
+#GHGs data
+data <- data %>% select(Pond_name, Pond_code, Season, TimeOfDay, Naturalization, Date, CH4_uatm, CO2_uatm, N2O_uatm)
+
+
+#Log transformation before perform the analyses
+data_trans <- data %>% mutate(across(c(CH4_uatm, CO2_uatm, N2O_uatm), ~log(.)))
+data_trans <- data_trans %>% mutate(Pond_name = as.factor(Pond_name))
+data_trans <- drop_errors(data_trans) %>% ungroup()
+
+##Assumptions====
+#- Outliers, normality, Homogeneity of variance
+#Identify outliers
+data_trans <- data %>% mutate(across(c(CH4_uatm, CO2_uatm, N2O_uatm), ~log(.)))
+data_trans %>% group_by(Naturalization, TimeOfDay) %>% identify_outliers(CH4_uatm) %>% filter(is.extrem = FALSE)
+data_trans %>% group_by(Naturalization, TimeOfDay) %>% identify_outliers(CO2_uatm) %>% filter(is.extrem = FALSE)
+data_trans %>% group_by(Naturalization, TimeOfDay) %>% identify_outliers(N2O_uatm) %>% filter(is.extrem = FALSE)
+
+#Checking normality
+data_trans %>% group_by(Naturalization, Season, TimeOfDay) %>% shapiro_test(CH4_uatm)
+data_trans %>% group_by(Naturalization, Season, TimeOfDay) %>% shapiro_test(CO2_uatm)
+data_trans %>% group_by(Naturalization, Season, TimeOfDay) %>% shapiro_test(N2O_uatm)
+
+#Check homogeneity
+data_trans %>%
+  group_by(Season, Naturalization) %>%
+  levene_test(CH4_uatm ~ TimeOfDay)
+data_trans %>%
+  group_by(Season, Naturalization) %>%
+  levene_test(CO2_uatm ~ TimeOfDay)
+data_trans %>%
+  group_by(Season, Naturalization) %>%
+  levene_test(N2O_uatm ~ TimeOfDay)
+
+
+##Transform
+  data_trans_l <- data_trans %>% select(Season, TimeOfDay, Naturalization, CH4_uatm, CO2_uatm, N2O_uatm) %>% 
+    pivot_longer(-c(Season, TimeOfDay, Naturalization), names_to = "Species")
+  
+  #T_test
+  options(width = 200)
+  #CO2
+  data_trans_l %>% filter(Species == "CO2_uatm") %>%
+    group_by(Naturalization, Season) %>% 
+    t_test(value ~ TimeOfDay, paired = T)%>%
+    adjust_pvalue(method = "holm")
+  #CH4
+  data_trans_l %>% filter(Species == "CH4_uatm") %>%
+    group_by(Naturalization, Season) %>% 
+    t_test(value ~ TimeOfDay, paired = T)%>%
+    adjust_pvalue(method = "holm")
+  #N2O
+  data_trans_l %>% filter(Species == "N2O_uatm") %>%
+    group_by(Naturalization, Season) %>% 
+    t_test(value ~ TimeOfDay, paired = T)%>%
+    adjust_pvalue(method = "holm")
+
+  ##-------------LOG SCALE Y-AXIS-----------------
+  data_l <- data %>% pivot_longer(-c(Pond_name, Pond_code, Season, TimeOfDay, Naturalization, Date), names_to = "variable", values_to = "uatm")
+  #Description plots
+  #I add atmosphere references values
+  data_l <- data_l %>% mutate(Atm_ref = case_when(variable == "CH4_uatm" ~ 1.92026,
+                                                  variable == "CO2_uatm" ~ 424,
+                                                  variable == "N2O_uatm" ~ 0.33653))
+  #reorder variables
+  data_l <- data_l %>% mutate(variable = fct_relevel(variable, "CO2_uatm"))
+  my_comparisons <- list(c("Day", "Night"))
+  
+```
+
+### Figure 4
+
+```{r plot 4, fig.height=7.87, fig.width=5.91}
+  ggplot(data_l, aes(x = Naturalization, y = uatm, fill = interaction(Naturalization, TimeOfDay, sep = "-", lex.order = T)))+
+    geom_violin(trim = F)+
+    #geom_text(aes(label = Letters, y = label_y), position = position_dodge(width = 0.8), vjust = -2.5) +
+    #stat_compare_means(method = "t.test", label = "p.signif", comparisons = my_comparisons)+
+    geom_pwc(aes(group = TimeOfDay), tip.length = 0.02,
+             method = "t_test", label = "p.signif", bracket.nudge.y = 0.3, p.adjust.method = "holm")+
+    geom_jitter(alpha = 0.4,position=position_jitterdodge())+
+    geom_hline(aes(yintercept = Atm_ref, linetype = "Atmosphere ref (NOAA, 2023)"))+
+    scale_linetype_manual(values = 2)+
+    scale_fill_manual(values=c("#E0F0FF","#99ccff", "#BFD47F","#739900"))+
+    scale_alpha_manual(values = c(1, 0.2))+ 
+    scale_y_log10(expand = expansion(mult = c(0.1, 0.12)), labels = scales::label_number(accuracy = 1, big.mark = ","))+
+    labs(x = "Naturalization", y = expression(paste("Partial pressure (", mu, "atm)")), linetype = NULL, fill = "Naturalization - Time of Day", color = NULL)+
+    facet_grid(variable~Season, scales = "free_y", labeller = labeller(variable = as_labeller(c(CH4_uatm = "CH[4]", CO2_uatm = "CO[2]", N2O_uatm = "N[2]*O"), default = label_parsed)))+
+    theme_bw(base_size = 12)+
+    theme(legend.position = "bottom", legend.text=element_text(size=6),
+          legend.title = element_text(size = 8), legend.key.size = unit(0.7, 'lines'),
+          text = element_text(family = "Helvetica"),
+          strip.text.y = element_text(angle = 0))+
+    guides(color = "none")
+  ggsave("Figure_4.png", width = 16, height = 20, units = "cm") 
+```
+
+
+## Drivers
+
+```{r Drivers, results='hide'}
+#library
+  library(tidyverse)
+  library(car)
+  library(corrplot)
+  library(GGally)
+  library(errors)
+  library(fuzzySim)
+
+  #Import data
+  data <- read_csv("rawdata/Data_for_repository.csv")
+  #Day data
+  data <- data %>% filter(TimeOfDay == "Day")
+  
+  #When I have NAs they are actually 0 (or close to 0) because we couldn't detect it. So:
+  data <- data %>%
+    mutate(across(where(is.numeric) & !all_of(c("CO2_uatm", "CH4_uatm", "N2O_uatm")), ~replace_na(., 0)))
+  
+  #Remove DO mgL because it is in %
+  data <- data %>% select(-c(DO_mgL, Latitude, Longitude))
+  
+  #Reduce correlated variables
+  data <- data %>% select(-c(Mg_ppm, S_ppm, Sr_ppm, Ca_ppm, Si_ppm, Na_ppm, TDN_mgL))
+  data <- data %>% mutate(Depth = volume_m3/Surface_m2) %>% 
+    select(-c(Surface_m2, volume_m3))
+  
+  ##Residual distribution
+  Data_l <- data %>% select(-c(Date)) %>%
+    pivot_longer(-c(TimeOfDay, Pond_name, Pond_code, Naturalization, Season), names_to =  "variable")
+  ggplot(Data_l, aes(sample = value))+
+    stat_qq()+
+    stat_qq_line()+
+    facet_wrap(~variable, scales = "free")
+  #Log
+  ggplot(Data_l, aes(sample = log(value)))+
+    stat_qq()+
+    stat_qq_line()+
+    facet_wrap(~variable, scales = "free")
+  
+  #Transform data 0's area handle adding a constant. In this case, it will be added the half of the minimum values register.
+  data <- data %>% drop_errors()
+  minvalues <- data %>% summarise(across(where(is.numeric), ~min(.[.>0],na.rm = T)))
+  data <- data %>% full_join(minvalues)
+  
+  data <- data  %>% mutate(across(where(is.numeric), ~case_when(. == 0 ~ last(.)/2,
+                                                                TRUE ~ .)))
+  data <- data %>% mutate(across(where(is.numeric), log))
+  data <- data[-length(data$Pond_name),]
+  
+  #Explore collinearity
+  #Select just numerical variables
+  data_num <- data %>% select(-c(TimeOfDay, Pond_name, Pond_code, Naturalization, Season, Date))
+  
+  #Inf as NAs
+  cor_matrix <- cor(data_num, use = "pairwise.complete.obs")
+  corrplot(cor_matrix, type = "upper", order = "hclust", 
+           tl.col = "black", tl.srt = 45, sig.level = 0.01, insig = "blank")
+  #Just high correlated values > 0.7
+  cor_matrix2 <- cor_matrix
+  cor_matrix2[cor_matrix2 > -0.7 & cor_matrix2 < 0.7] <- 0
+  corrplot(cor_matrix2, type = "upper", order = "hclust", 
+           tl.col = "black", tl.srt = 45, sig.level = 0.01, insig = "blank")
+  #Reduce collinearity
+  data <- data %>% select(-c(Conductivity_uScm, DOC_mgL))
+  
+  #For CH4
+  #Step wise regression
+  CH4 <- data %>% select(-c(CO2_uatm, N2O_uatm, Pond_name,Pond_code, Season, TimeOfDay, Naturalization, Date))
+  CH4 <- drop_errors(CH4)
+  any(is.na(CH4))
+  sapply(CH4, function(col) any(is.infinite(col)))
+  modelCH4 <- lm(CH4_uatm ~ ., data = CH4)
+
+  modelCH4 <- step(modelCH4, direction = "both")  
+  
+  modelCH4
+  summary(modelCH4)
+  vif(modelCH4)
+  
+  #For CO2
+  #Step wise regression
+  CO2 <- data %>% select(-c(CH4_uatm, N2O_uatm, Pond_name,Pond_code, Season, TimeOfDay, Naturalization, Date))
+  
+  modelCO2 <- lm(CO2_uatm ~ ., data = CO2)
+
+  modelCO2 <- step(modelCO2, direction = "both")  
+  
+  modelCO2
+  summary(modelCO2)
+  vif(modelCO2)
+  modelCO2$anova
+  
+  #For N2O
+  #Step wise regression
+  N2O <- data %>% select(-c(CO2_uatm, CH4_uatm, Pond_name,Pond_code, Season, TimeOfDay, Naturalization, Date))
+  
+  modelN2O <- lm(N2O_uatm ~ ., data = N2O)
+  
+  modelN2O <- step(modelN2O, direction = "both")  
+  
+  modelN2O
+  summary(modelN2O)
+  vif(modelN2O)
+
+##Remove non significants variables  
+  
+  #CH4
+  modelCH4_trimmed <- modelTrim(modelCH4) 
+  modelCH4_trimmed
+  summary(modelCH4_trimmed)
+  AIC(modelCH4_trimmed)
+  vif(modelCH4_trimmed)
+  resid_panel(modelCH4_trimmed)
+  
+  #CO2
+  modelCO2_trimmed <- modelTrim(modelCO2)
+  modelCO2_trimmed
+  summary(modelCO2_trimmed)
+  AIC(modelCO2_trimmed)
+  vif(modelCO2_trimmed)
+  resid_panel(modelCO2_trimmed)
+  
+  #N2O
+  modelN2O_trimmed <- modelTrim(modelN2O)
+  modelN2O_trimmed
+  summary(modelN2O_trimmed)
+  AIC(modelN2O_trimmed)
+  vif(modelN2O_trimmed) 
+  resid_panel(modelN2O_trimmed)
+```
+
+```{r models}
+  print("CO2")
+  summary(modelCO2_trimmed)
+  AIC(modelCO2_trimmed)
+  print("CH4")
+  summary(modelCH4_trimmed)
+  AIC(modelCH4_trimmed)
+  print("N2O")
+  summary(modelN2O_trimmed)
+  AIC(modelN2O_trimmed)
+  
+  #Create the table
+    #define function to extract overall p-value of model
+    overall_p <- function(my_model) {
+      f <- summary(my_model)$fstatistic
+      p <- unname(pf(f[1],f[2],f[3],lower.tail=F))
+      attributes(p) <- NULL
+      return(p)
+    }
+  #Table
+  Table_models <-data.frame(Model = as.character(c(formula(modelCO2_trimmed), formula(modelCH4_trimmed),formula(modelN2O_trimmed))),
+             DF = c(df.residual(modelCO2_trimmed), df.residual(modelCH4_trimmed),df.residual(modelN2O_trimmed)),
+             RMSE = c(round(sigma(modelCO2_trimmed), 2), round(sigma(modelCH4_trimmed), 2),round(sigma(modelN2O_trimmed), 2)),
+             R2 = c(round(summary(modelCO2_trimmed)$r.squared, 2), round(summary(modelCH4_trimmed)$r.squared, 2), round(summary(modelN2O_trimmed)$r.squared, 2)),
+             R2adj = c(round(summary(modelCO2_trimmed)$adj.r.squared, 2), round(summary(modelCH4_trimmed)$adj.r.squared, 2), round(summary(modelN2O_trimmed)$adj.r.squared, 2)),
+             Pvalue = c(format.pval(overall_p(modelCO2_trimmed)), format.pval(overall_p(modelCH4_trimmed)), format.pval(overall_p(modelN2O_trimmed))),
+             R2adj = c(round(summary(modelCO2_trimmed)$fstatistic[1], 2), round(summary(modelCH4_trimmed)$fstatistic[1], 2), round(summary(modelN2O_trimmed)$fstatistic[1], 2)),
+             AIC = c(round(AIC(modelCO2_trimmed), 2), round(AIC(modelCH4_trimmed), 2),round(AIC(modelN2O_trimmed), 2)))
+  
+```
+
+### Table 1 - Model
+
+
+```{r, Table models}
+  library(knitr)
+  library(kableExtra)
+  Table_models %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE,
+                position = "center")
+  
+```
+
+
+## Difussive flux
+
+```{r}
+ library(tidyverse)
+  library(errors)
+  library(rstatix)
+  library(ggResidpanel)
+  library(lmerTest)
+
+#Import data
+  data <- read_csv("rawdata/CO2eq.csv")
+
+  #long format
+  data_l <- data %>%  pivot_longer(-c(Pond_name, Pond_code, Season, TimeOfDay, Naturalization, Date), names_to = "variable", values_to = "Flux_CO2eq")
+
+  #reorder variables
+  data_l <- data_l %>% mutate(variable = fct_relevel(variable, "FCO2_mgCO2eqm2d1"))
+```
+
+### Figure 5
+
+```{r}
+  #Plot
+  #Mean between summer and winter
+  data_l <- data_l %>% group_by(Naturalization, variable, Pond_name) %>% 
+    summarise(Flux_CO2eq = mean(Flux_CO2eq, na.rm = T)) %>% 
+    ungroup()
+  ggplot(data_l, aes(x = Naturalization, y = Flux_CO2eq, fill = variable))+
+    geom_boxplot()+
+    geom_hline(yintercept = 0)+
+    geom_jitter(alpha = 0.2, position=position_jitterdodge(), shape = 21)+
+    scale_fill_manual(values = c("gray40","#e6b800","#cc2900"), labels = c(expression(CO[2]), expression(CH[4]), expression(N[2]*O)))+
+    labs(y = expression(paste("GHG flux (mg CO"[2]*" eq · m"^{-2}*"· d"^{-1}, ")")), fill = NULL)+
+    theme_bw(base_size = 12)  
+  ggsave("Figure_5.png", width = 16, height = 15, units = "cm") 
+```
+
+### Wilcoxon tests
+```{r, results='hide'}
+#Mean per pond (winter and summer))  
+  # data_l <- data_l %>% group_by(Pond_name, Naturalization, variable) %>% summarise(Flux_CO2eq = mean(Flux_CO2eq)) %>% 
+  #   ungroup()
+  #Transform data
+  CH4 <- data_l %>% filter(variable == "FCH4_mgCO2eqm2d1") %>% mutate(Flux_CO2eq = log(Flux_CO2eq))
+  #Check outlier, normality and homogeneity
+  CH4 %>% group_by(Naturalization, variable) %>% identify_outliers(Flux_CO2eq) %>% filter(is.extreme == "TRUE")
+  CH4 %>% group_by(Naturalization) %>% shapiro_test(Flux_CO2eq)
+  CH4 %>% levene_test(Flux_CO2eq ~ Naturalization)
+  ##Wilcoxon (U man whitney)
+  res.wilcox_CH4 <- wilcox_test(data = CH4, Flux_CO2eq ~ Naturalization)
+  
+  
+#CO2  
+  #Transform data
+  CO2 <- data_l %>% filter(variable == "FCO2_mgCO2eqm2d1") %>% mutate(Flux_CO2eq = log(abs(Flux_CO2eq))*sign(Flux_CO2eq))
+  #Check outlier, normality and homogeneity
+  CO2 %>% group_by(Naturalization, variable) %>% identify_outliers(Flux_CO2eq)%>% filter(is.extreme == "TRUE")
+  CO2 %>% group_by(Naturalization) %>% shapiro_test(Flux_CO2eq)
+  CO2 %>% drop_errors()%>% levene_test(Flux_CO2eq ~ Naturalization)
+  
+  #Wilcoxon
+  res.wilcox_CO2 <- wilcox_test(data = CO2, Flux_CO2eq ~ Naturalization)
+  res.wilcox_CO2
+
+#N2O
+  #Transform data
+  N2O <-  data_l %>% filter(variable == "FN2O_mgCO2eqm2d1") %>% mutate(Flux_CO2eq = log(Flux_CO2eq))
+  #Check outlier, normality and homogeneity
+  N2O %>% group_by(Naturalization, variable) %>% identify_outliers(Flux_CO2eq)%>% filter(is.extreme == "TRUE")
+  N2O %>% group_by(Naturalization) %>% shapiro_test(Flux_CO2eq)
+  N2O %>% levene_test(Flux_CO2eq ~ Naturalization)
+  
+  #Wilcoxon
+  res.wilcox_N2O <- wilcox_test(data = N2O, Flux_CO2eq ~ Naturalization)
+  res.wilcox_N2O
+```
+
+#### Per gas species
+```{r}
+#CH4
+res.wilcox_CH4
+#CO2
+res.wilcox_CO2
+#N2O
+res.wilcox_N2O
+```
+
+#### Total CO2 equivalent
+```{r}
+##Compare total CO2eq flux (CO2+CH4+N2O)
+  #long format
+  # data_l <- data %>%  pivot_longer(-c(Pond_name, Pond_code, Season, TimeOfDay, Naturalization, Date), names_to = "variable", values_to = "Flux_CO2eq")
+  ##Total CO2eq
+  data_total_l <- data_l %>% group_by(Naturalization, Pond_name) %>% summarise(Total_FCO2eq = sum(Flux_CO2eq)) %>% 
+    ungroup()  
+  #Annual mean
+  data_total_l <- data_total_l %>% 
+    mutate(Log_Total_FCO2eq = log(Total_FCO2eq)) %>% 
+    ungroup()
+  
+  #Check outlier, normality and homogeneity
+  data_total_l %>% group_by(Naturalization) %>% identify_outliers(Log_Total_FCO2eq)%>% filter(is.extreme == "TRUE")
+  data_total_l %>% group_by(Naturalization) %>% shapiro_test(Log_Total_FCO2eq)
+  data_total_l %>% drop_errors() %>% levene_test(Log_Total_FCO2eq ~ Naturalization)
+  
+
+  ##Wilcoxon (U man whitney)
+  res.wilcox_TF <- wilcox_test(data = data_total_l, Log_Total_FCO2eq ~ Naturalization)
+  res.wilcox_TF
+  
+```
+
+### Summary
+```{r }
+##Summary
+  data_total_l %>% group_by(Naturalization) %>% 
+    summarise(Median = median(Total_FCO2eq, na.rm = T),
+              Min = min(Total_FCO2eq, na.rm = T),
+              Max = max(Total_FCO2eq, na.rm = T),
+              Q1 = quantile(Total_FCO2eq, na.rm = T, probs = 0.25),
+              Q3 = quantile(Total_FCO2eq, na.rm = T, probs = 0.75),
+              IQR = IQR(Total_FCO2eq, na.rm = T))
+  data_l %>% group_by(variable, Naturalization) %>% 
+    summarise(Median = median(Flux_CO2eq, na.rm = T),
+              Min = min(Flux_CO2eq, na.rm = T),
+              Max = max(Flux_CO2eq, na.rm = T),
+              Q1 = quantile(Flux_CO2eq, na.rm = T, probs = 0.25),
+              Q3 = quantile(Flux_CO2eq, na.rm = T, probs = 0.75),
+              IQR = IQR(Flux_CO2eq, na.rm = T))
+  
+  #% calculate per pond and summarise by Naturalization
+  Contribution <- data_l %>% left_join(select(data_total_l, - Log_Total_FCO2eq)) %>% 
+    rowwise() %>% 
+    mutate(Per_contribution = Flux_CO2eq/Total_FCO2eq*100) %>% 
+    ungroup()
+  
+  Contribution %>% group_by(variable, Naturalization) %>% 
+    summarise(Median = median(Per_contribution, na.rm = T),
+              Min = min(Per_contribution, na.rm = T),
+              Max = max(Per_contribution, na.rm = T),
+              Q1 = quantile(Per_contribution, na.rm = T, probs = 0.25),
+              Q3 = quantile(Per_contribution, na.rm = T, probs = 0.75),
+              IQR = IQR(Per_contribution, na.rm = T))
+
+##Calculation of the relevance of this GHGs emission
+  #The per capita emission in Barcelona in 2022 was ~ 2.1 t CO2eq 
+  #The peak emission in BCN was reached in 2005 with 5·10⁶ t CO2eq, and in 2022 it was 3.5 · 10⁶ t CO2eq 
+  #Info: https://bcnroc.ajuntament.barcelona.cat/jspui/bitstream/11703/133640/1/Balanc%cc%a7_Energia_2022.pdf
+  
+  #The total surface area of all artificial water bodies in BCN is ~ 130000 m².
+  
+  #The average emission of a tourist is 11.6 kg CO2 eq/day #https://www-sciencedirect-com.sire.ub.edu/science/article/pii/S0261517718302206
+  
+  #Median
+  median(data_total_l$Total_FCO2eq*132000*365/1000000000, na.rm = T) #t CO2eq
+  #Q1
+  quantile(data_total_l$Total_FCO2eq*132000*365/1000000000, na.rm = T, probs = 0.25)
+  #Q3
+  quantile(data_total_l$Total_FCO2eq*132000*365/1000000000, na.rm = T, probs = 0.75)
+  #It is equivalent to:
+  median(data_total_l$Total_FCO2eq*132000*365/1000000000, na.rm = T)/2.1 #inhabitants
+
+##Print results  
+  print("CO2")
+  res.wilcox_CO2
+  print("CH4")
+  res.wilcox_CH4
+  print("N2O")
+  res.wilcox_N2O
+  print("Total")
+  res.wilcox_TF
+  print("Summary")
+  data_total_l %>% group_by(Naturalization) %>% 
+    summarise(Median = median(Total_FCO2eq, na.rm = T),
+              Min = min(Total_FCO2eq, na.rm = T),
+              Max = max(Total_FCO2eq, na.rm = T),
+              Q1 = quantile(Total_FCO2eq, na.rm = T, probs = 0.25),
+              Q3 = quantile(Total_FCO2eq, na.rm = T, probs = 0.75),
+              IQR = IQR(Total_FCO2eq, na.rm = T))
+  data_l %>% group_by(variable, Naturalization) %>% 
+    summarise(Median = median(Flux_CO2eq, na.rm = T),
+              Min = min(Flux_CO2eq, na.rm = T),
+              Max = max(Flux_CO2eq, na.rm = T),
+              Q1 = quantile(Flux_CO2eq, na.rm = T, probs = 0.25),
+              Q3 = quantile(Flux_CO2eq, na.rm = T, probs = 0.75),
+              IQR = IQR(Flux_CO2eq, na.rm = T))
+  print("ContributionPercentage")
+  Contribution %>% group_by(variable, Naturalization) %>% 
+    summarise(Median = median(Per_contribution, na.rm = T),
+              Min = min(Per_contribution, na.rm = T),
+              Max = max(Per_contribution, na.rm = T),
+              Q1 = quantile(Per_contribution, na.rm = T, probs = 0.25),
+              Q3 = quantile(Per_contribution, na.rm = T, probs = 0.75),
+              IQR = IQR(Per_contribution, na.rm = T))
+  #Median
+  median(data_total_l$Total_FCO2eq*132000*365/1000000000, na.rm = T) #t CO2eq
+  #Q1
+  quantile(data_total_l$Total_FCO2eq*132000*365/1000000000, na.rm = T, probs = 0.25)
+  #Q3
+  quantile(data_total_l$Total_FCO2eq*132000*365/1000000000, na.rm = T, probs = 0.75)
+  #It is equivalent to:
+  median(data_total_l$Total_FCO2eq*132000*365/1000000000, na.rm = T)/2.1 #inhabitants
+```
+
+
+# Suplementary material
+
+```{r Supplementary material, results='hide'}
+
+##Libraries----
+  library(tidyverse)
+  library(lmerTest)
+  library(lme4)
+  library(errors)
+  library(ggResidpanel)
+  library(rstatix)
+
+#Import data
+data <- read_csv("rawdata/Data_for_repository.csv")
+
+#Day data
+data <- data %>% filter(TimeOfDay == "Day")
+  
+  #I add depth variable
+  data <- data %>% mutate(Depth = volume_m3/Surface_m2)
+  #I only take it into account for the percentages, which are values of 0, and I add 0.0001 to them
+  data <- data %>% mutate(across(c(Perc_SubsurfaceCover, Perc_SurfaceCover), ~case_when(. == 0 ~ 0.01,
+                                                                                        TRUE ~ .)))
+  data <- data %>% mutate(across(where(is.numeric), ~case_when(. == 0 ~ NA,
+                                                                                     TRUE ~ .)))
+  #Select variable included in the table
+  data_comparison <- data %>% select(Pond_name, Season, Naturalization, DO_mgL, DO_perc, Conductivity_uScm, pH, Temp_C,
+                                     Chla_ugL, Pheo_ugL, Perc_SubsurfaceCover, Perc_SurfaceCover,
+                                     DOC_mgL, TDN_mgL, TP_mgL,
+                                     Cl_mgL, SO4_mgL, NO3_mgL,
+                                     K_ppm, Mg_ppm, Ca_ppm, Ca_ppm, Na_ppm, S_ppm, Si_ppm,
+                                     Fe_ppb, Mn_ppb, Sr_ppm,
+                                     volume_m3, Surface_m2, Depth)
+  
+##Transform data----
+  data_trans <- data_comparison
+
+  data_trans <- data_trans %>% mutate(across(where(is.numeric), log))
+
+##Longformat data
+  Data_comparison_l <- data_trans %>%
+    pivot_longer(-c(Pond_name, Naturalization, Season), names_to =  "Var")
+  
+##Check assumptions----
+ #I'm going to apply linear mixed models so the assumption should be check it after model fitting
+  
+##t-studen or U Mann Whitney or lmer----
+  #I use a loop 
+  Vars <- unique(Data_comparison_l$Var)
+  models <- list()
+  for(i in Vars){
+    print(i)
+    #i <- Vars[26]
+    data_model <- Data_comparison_l %>% filter(Var == i) %>% drop_na()
+    model <- lmer(value ~ Naturalization + (1 | Pond_name) + (1 | Season), data = data_model)
+    models[[length(models) + 1]] <- model
+  }
+  names(models) <- Vars
+  anovas_models <- lapply(models, anova)
+  anovas_models
+  #Extract p values
+  pvalues <- lapply(anovas_models, function(x){ return(x$`Pr(>F)`)})
+  pvalues <- do.call(rbind, pvalues) %>% as.data.frame() %>% 
+    rownames_to_column(var = "Var") %>% 
+    rename(pvalue = V1)
+
+##Check models residuals====
+  #Extract residuals
+  residuos <- lapply(models, residuals)
+  residuos <- do.call(cbind, residuos) %>% as.data.frame() %>%
+    rownames_to_column(var = "rowname")
+  residuos_l <- residuos %>% pivot_longer(-rowname, names_to = "Variable", values_to  = "Residuals")
+  #Extract fitted values
+  fitted_values <- lapply(models, fitted)
+  fitted_values <- do.call(cbind, fitted_values) %>% as.data.frame() %>%
+    rownames_to_column(var = "rowname")
+  fitted_values_l <- fitted_values %>% pivot_longer(-rowname, names_to = "Variable", values_to  = "Fitted")
+  data_check <- left_join(residuos_l, fitted_values_l)
+  
+  data_table <- data %>% select(Pond_name, Season, Naturalization, DO_mgL, DO_perc, Conductivity_uScm, pH, Temp_C,
+                                Chla_ugL, Pheo_ugL, Perc_SubsurfaceCover, Perc_SurfaceCover,
+                                DOC_mgL, TDN_mgL, TP_mgL,
+                                Cl_mgL, SO4_mgL, NO3_mgL,
+                                K_ppm, Mg_ppm, Ca_ppm, Ca_ppm, Na_ppm, S_ppm, Si_ppm, 
+                                Fe_ppb, Mn_ppb, Sr_ppm,
+                                volume_m3, Surface_m2, Depth)
+  
+  Data_l <- data_table %>%
+    pivot_longer(-c(Pond_name, Naturalization, Season), names_to =  "Var")
+  ##Surface and volume=====
+        #For surface and volume i can't use repeatd data, i select just one season and apply t.test
+        #Select just surface and volume
+        data_SV <- Data_l %>% filter(Season == "Summer") %>% filter(Var %in% c("Surface_m2", "volume_m3"))
+        Data_l <- Data_l %>% filter(!Var %in% c("Surface_m2", "volume_m3")) %>% bind_rows(data_SV)
+        #Transform data to meet assumptions
+        data_SV <- data_SV %>% mutate(value = log(value))
+        #Check extreme outliers
+        data_SV %>% group_by(Naturalization, Var) %>% identify_outliers(value) %>% filter(is.extreme == "TRUE")
+        #Check normality
+        data_SV %>% group_by(Naturalization, Var) %>% shapiro_test(value)
+        #Check homogeneity
+        data_SV %>%
+          group_by(Var) %>%
+          levene_test(value ~ Naturalization)
+        #Now t.test
+        pvalue_SV <- data_SV %>%  group_by(Var) %>% t_test(value ~ Naturalization) %>% rename(pvalue = p) %>% 
+          select(Var, pvalue)
+        #Join to the others pvalues
+        pvalues <- pvalues %>% filter(!Var %in% c("Surface_m2", "volume_m3")) %>% bind_rows(pvalue_SV)
+
+        #For depth I have to apply a lmm
+        data_D <- Data_l %>% filter(Season == "Summer") %>% filter(Var %in% c("Depth"))
+        Data_l <- Data_l %>% filter(!Var %in% c("Depth")) %>% bind_rows(data_D)
+        #Transform data to meet assumptions
+        data_D <- data_D %>% mutate(value = log(value))
+        #Check extreme outliers
+        data_D %>% group_by(Naturalization, Var) %>% identify_outliers(value) %>% filter(is.extreme == "TRUE")
+        #Check normality
+        data_D %>% group_by(Naturalization, Var) %>% shapiro_test(value)
+        #Check homogeneity
+        data_D %>%
+          group_by(Var) %>%
+          levene_test(value ~ Naturalization)
+        #Now t.test
+        pvalue_D <- data_D %>%  group_by(Var) %>% wilcox_test(value ~ Naturalization) %>% rename(pvalue = p) %>% 
+          select(Var, pvalue)
+        #Join to the others pvalues
+        pvalues <- pvalues %>% filter(!Var %in% c("Depth")) %>% bind_rows(pvalue_D)
+        
+  
+  Tabla_Results <- Data_l %>% group_by(Naturalization, Var) %>% 
+    summarise(Mean = mean(value, na.rm = T),
+              Sd = sd(value, na.rm = T),
+              Median = median(value, na.rm = T),
+              Q1 = quantile(value, 0.25, na.rm = T),
+              Q3 = quantile(value, 0.75, na.rm = T),
+              Min = min(value, na.rm = T),
+              Max = max(value, na.rm = T),
+              SE = sd(value, na.rm = T)/sqrt(sum(!is.na(value))), #Not considering NAs
+              n = sum(!is.na(value))) %>% 
+    ungroup()
+  Tabla_Results <- Tabla_Results %>% left_join(pvalues)
+  
+  
+  #Assign categories
+  Physical <- c("Temp", "Surface_m2", "volume_m3", "Depth")
+  Biological <- c("Chla_ugL", "Pheo_ugL", "Perc_SurfaceCover", "Perc_SubsurfaceCover")
+  Chemical <- Tabla_Results %>% select(Var) %>% filter(!Var %in% Physical & !Var %in% Biological) %>% pull()
+  Tabla_Results <- Tabla_Results %>% mutate(Category = case_when(Var %in% Physical ~ "Physical",
+                                                 Var %in% Biological ~ "Biological",
+                                                 Var %in% Chemical ~ "Chemical"))
+  
+  #Arrange by category and reorder by column
+  Tabla_Results <- Tabla_Results %>% arrange(Naturalization, Category) %>% 
+    relocate(Naturalization, Category, Var, pvalue, Mean, Sd, Median, Q1, Q3, Min, Max)
+  
+  write_csv(Tabla_Results, "Table_allvars_results.csv")
+```
+
+## Table S1
+```{r}
+
+
+  Tabla_Results %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE,
+                position = "center") %>%
+  scroll_box(width = "100%", height = "400px")
+
+```
+
+
+```
+
