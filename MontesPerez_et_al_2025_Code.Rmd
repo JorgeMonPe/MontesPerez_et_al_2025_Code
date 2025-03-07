@@ -42,7 +42,7 @@ library(ggfortify)
 
 ```{r AUP PCA}
 #Import data
-  data <- read_csv("rawdata/Data_for_repository.csv")
+  data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
   
 #Select variables for PCA
   #Just day time measurements
@@ -131,7 +131,7 @@ library(ggfortify)
 
 ```{r}
 #Import data
-data <- read_csv("rawdata/Data_for_repository.csv")
+data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
   
   #Day data
   data <- data %>% filter(TimeOfDay == "Day")
@@ -357,7 +357,7 @@ library(lmerTest)
 library(ggpubr)
 
 #Import data
-data <- read_csv("rawdata/Data_for_repository.csv")
+data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
 
 #Ponds sampled at night
 night <- data %>% filter(TimeOfDay == "Night")
@@ -472,7 +472,7 @@ data_trans %>%
   library(fuzzySim)
 
   #Import data
-  data <- read_csv("rawdata/Data_for_repository.csv")
+  data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
   #Day data
   data <- data %>% filter(TimeOfDay == "Day")
   
@@ -858,7 +858,7 @@ res.wilcox_N2O
   library(rstatix)
 
 #Import data
-data <- read_csv("rawdata/Data_for_repository.csv")
+data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
 
 #Day data
 data <- data %>% filter(TimeOfDay == "Day")
