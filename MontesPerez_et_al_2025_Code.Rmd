@@ -106,11 +106,13 @@ library(ggfortify)
   plot_PC1_PC2 <- autoplot(pca_todo, x=1, y = 2, data = day, fill = "Naturalization", shape = 21, size = 3,
                            loadings = TRUE, loadings.colour = 'gray',
                            loadings.label = TRUE, loadings.label.size = 3, loadings.label.colour = "black",
-                           loadings.label.repel=T)+
+                           loadings.label.repel=T,
+                         loadings.label.family = "Times")+
     scale_fill_manual(values = c("#99ccff","#739900"))+
-    theme_linedraw(base_size = 12)+
+    theme_bw(base_size = 12, base_family = "Times")+
     theme(legend.position = "bottom")
   plot_PC1_PC2
+  ggsave("Figure_2.pdf", width = 15, height = 15, units = "cm")
   ggsave("Figure_2.png", width = 15, height = 15, units = "cm")
 ```
 
@@ -308,16 +310,17 @@ data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
 ##-------------PLOT - LOG SCALE Y-AXIS-----------------
   ggplot(data_l, aes(x = Season, y = uatm, fill = Naturalization))+
     geom_violin(trim = F)+
-    geom_text(aes(label = Letters, y = label_y), position = position_dodge(width = 0.8), vjust = -5) +
-    geom_jitter(alpha = 0.4,position=position_jitterdodge(), shape = 21)+
+    geom_text(aes(label = Letters, y = label_y), position = position_dodge(width = 0.8), vjust = -5, family = "Times") +
+    geom_jitter(alpha = 0.4,position=position_jitterdodge(jitter.width = 0.2, dodge.width = 0.9), shape = 21)+
     geom_hline(aes(yintercept = Atm_ref, linetype = "Atmosphere ref (NOAA, 2023)"))+
     scale_linetype_manual(values = 2)+
     scale_fill_manual(values = c("#99ccff","#739900"))+
-    scale_y_log10(expand = expansion(mult = c(0.1, 0.2)), labels = scales::label_number(accuracy = 1, big.mark = ","))+
+    scale_y_log10(expand = expansion(mult = c(0.1, 0.2)), labels = scales::label_number(accuracy = 1, big.mark = ","), guide = "axis_logticks")+
     labs(x = "Naturalization", y = expression(paste("Partial pressure (", mu, "atm)")), linetype = NULL)+
     facet_wrap(~variable, scales = "free", labeller = as_labeller(c(CH4_uatm = "CH[4]", CO2_uatm = "CO[2]", N2O_uatm = "N[2]*O"), default = label_parsed))+
-    theme_bw(base_size = 12)+
-    theme(legend.position = "bottom", text = element_text(family = "Helvetica"))
+    theme_bw(base_size = 12, base_family = "Times")+
+    theme(legend.position = "bottom", text = element_text(family = "Times"))
+  ggsave("Figure_3.pdf", width = 16, height = 10, units = "cm")
   ggsave("Figure_3.png", width = 16, height = 10, units = "cm")
 ```
 
@@ -331,7 +334,8 @@ data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
               Max = max(uatm, na.rm = T),
               Q1 = quantile(uatm, na.rm = T, probs = 0.25),
               Q3 = quantile(uatm, na.rm = T, probs = 0.75),
-              IQR = IQR(uatm, na.rm = T))
+              IQR = IQR(uatm, na.rm = T),
+              Mean = mean(uatm, na.rm = T))
   
   #Per group
   data_l %>% drop_errors() %>% group_by(variable, Naturalization, Season) %>%
@@ -340,7 +344,8 @@ data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
               Max = max(uatm, na.rm = T),
               Q1 = quantile(uatm, na.rm = T, probs = 0.25),
               Q3 = quantile(uatm, na.rm = T, probs = 0.75),
-              IQR = IQR(uatm, na.rm = T))
+              IQR = IQR(uatm, na.rm = T),
+              Mean = mean(uatm, na.rm = T))
 ```
 
 
@@ -436,26 +441,30 @@ data_trans %>%
 ### Figure 4
 
 ```{r plot 4, fig.height=7.87, fig.width=5.91}
-  ggplot(data_l, aes(x = Naturalization, y = uatm, fill = interaction(Naturalization, TimeOfDay, sep = "-", lex.order = T)))+
-    geom_violin(trim = F)+
-    #geom_text(aes(label = Letters, y = label_y), position = position_dodge(width = 0.8), vjust = -2.5) +
-    #stat_compare_means(method = "t.test", label = "p.signif", comparisons = my_comparisons)+
-    geom_pwc(aes(group = TimeOfDay), tip.length = 0.02,
-             method = "t_test", label = "p.signif", bracket.nudge.y = 0.3, p.adjust.method = "holm")+
-    geom_jitter(alpha = 0.4,position=position_jitterdodge())+
-    geom_hline(aes(yintercept = Atm_ref, linetype = "Atmosphere ref (NOAA, 2023)"))+
-    scale_linetype_manual(values = 2)+
-    scale_fill_manual(values=c("#E0F0FF","#99ccff", "#BFD47F","#739900"))+
-    scale_alpha_manual(values = c(1, 0.2))+ 
-    scale_y_log10(expand = expansion(mult = c(0.1, 0.12)), labels = scales::label_number(accuracy = 1, big.mark = ","))+
-    labs(x = "Naturalization", y = expression(paste("Partial pressure (", mu, "atm)")), linetype = NULL, fill = "Naturalization - Time of Day", color = NULL)+
-    facet_grid(variable~Season, scales = "free_y", labeller = labeller(variable = as_labeller(c(CH4_uatm = "CH[4]", CO2_uatm = "CO[2]", N2O_uatm = "N[2]*O"), default = label_parsed)))+
-    theme_bw(base_size = 12)+
-    theme(legend.position = "bottom", legend.text=element_text(size=6),
-          legend.title = element_text(size = 8), legend.key.size = unit(0.7, 'lines'),
-          text = element_text(family = "Helvetica"),
-          strip.text.y = element_text(angle = 0))+
-    guides(color = "none")
+ggplot(data_l, aes(x = Naturalization, y = uatm, fill = interaction(Naturalization, TimeOfDay, sep = "-", lex.order = T)))+
+  geom_violin(trim = F)+
+  #geom_text(aes(label = Letters, y = label_y), position = position_dodge(width = 0.8), vjust = -2.5) +
+  #stat_compare_means(method = "t.test", label = "p.signif", comparisons = my_comparisons)+
+  geom_pwc(aes(group = TimeOfDay), tip.length = 0.02,
+           method = "t_test", label = "p.signif", bracket.nudge.y = 0.3, p.adjust.method = "holm", family = "Times")+
+  geom_jitter(alpha = 0.4,position=position_jitterdodge(jitter.width = 0.2, dodge.width = 0.9))+
+  geom_hline(aes(yintercept = Atm_ref, linetype = "Atmosphere ref (NOAA, 2023)"))+
+  scale_linetype_manual(values = 2)+
+  scale_fill_manual(values=c("#E0F0FF","#99ccff", "#BFD47F","#739900"))+
+  scale_alpha_manual(values = c(1, 0.2))+ 
+  scale_y_log10(expand = expansion(mult = c(0.1, 0.12)), labels = scales::label_number(accuracy = 1, big.mark = ","), guide = "axis_logticks")+
+  labs(x = "Naturalization", y = expression(paste("Partial pressure (", mu, "atm)")), linetype = NULL, fill = "Naturalization - Time of Day", color = NULL)+
+  facet_grid(variable~Season, scales = "free_y", labeller = labeller(variable = as_labeller(c(CH4_uatm = "CH[4]", CO2_uatm = "CO[2]", N2O_uatm = "N[2]*O"), default = label_parsed)))+
+  theme_bw(base_size = 12, base_family = "Times")+
+  guides(fill = guide_legend(title.position = "top", 
+                        title.hjust = 0.5))+
+  theme(legend.position = "bottom", legend.text=element_text(size=10),
+        legend.title = element_text(size = 10, face = "bold"), legend.key.size = unit(0.7, 'lines'),
+        legend.box = "vertical",
+        text = element_text(family = "Times"),
+        strip.text.y = element_text(angle = 0))+
+  guides(color = "none")
+  ggsave("Figure_4.pdf", width = 16, height = 20, units = "cm") 
   ggsave("Figure_4.png", width = 16, height = 20, units = "cm") 
 ```
 
@@ -593,6 +602,19 @@ data_trans %>%
   resid_panel(modelN2O_trimmed)
 ```
 
+```{r export resid plots, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+resid_panel(modelCO2_trimmed)
+ggsave("Figure_S1.pdf", width = 16, height = 15, units = "cm")
+ggsave("Figure_S1.png", width = 16, height = 15, units = "cm")
+resid_panel(modelCH4_trimmed)
+ggsave("Figure_S2.pdf", width = 16, height = 15, units = "cm")
+ggsave("Figure_S2.png", width = 16, height = 15, units = "cm")
+resid_panel(modelN2O_trimmed)
+ggsave("Figure_S3.pdf", width = 16, height = 15, units = "cm")
+ggsave("Figure_S3.png", width = 16, height = 15, units = "cm")
+```
+
+
 ```{r models}
   print("CO2")
   summary(modelCO2_trimmed)
@@ -603,6 +625,7 @@ data_trans %>%
   print("N2O")
   summary(modelN2O_trimmed)
   AIC(modelN2O_trimmed)
+  
   
   #Create the table
     #define function to extract overall p-value of model
@@ -667,14 +690,21 @@ data_trans %>%
   data_l <- data_l %>% group_by(Naturalization, variable, Pond_name) %>% 
     summarise(Flux_CO2eq = mean(Flux_CO2eq, na.rm = T)) %>% 
     ungroup()
-  ggplot(data_l, aes(x = Naturalization, y = Flux_CO2eq, fill = variable))+
-    geom_boxplot()+
-    geom_hline(yintercept = 0)+
-    geom_jitter(alpha = 0.2, position=position_jitterdodge(), shape = 21)+
-    scale_fill_manual(values = c("gray40","#e6b800","#cc2900"), labels = c(expression(CO[2]), expression(CH[4]), expression(N[2]*O)))+
-    labs(y = expression(paste("GHG flux (mg CO"[2]*" eq · m"^{-2}*"· d"^{-1}, ")")), fill = NULL)+
-    theme_bw(base_size = 12)  
-  ggsave("Figure_5.png", width = 16, height = 15, units = "cm") 
+  add_total_flux <- data_l %>% group_by(Naturalization, Pond_name) %>% summarise(Flux_CO2eq = sum(Flux_CO2eq)) %>% 
+  ungroup()  %>% 
+  mutate(variable = "Total")
+
+data_l %>% bind_rows(add_total_flux) %>% 
+  ggplot(aes(x = Naturalization, y = Flux_CO2eq, fill = variable))+
+  geom_boxplot()+
+  stat_summary(fun = mean, geom = "point", shape = 8, size = 2, color = "black", position = position_dodge(width = 0.75))+
+  geom_hline(yintercept = 0)+
+  #geom_jitter(alpha = 0.2, position=position_jitterdodge(), shape = 21)+
+  scale_fill_manual(values = c("gray40","#e6b800","#cc2900", "gray90"), labels = c(expression(CO[2]), expression(CH[4]), expression(N[2]*O, "Total")))+
+  labs(y = expression(paste("GHG flux (mg CO"[2]*" eq · m"^{-2}*"· d"^{-1}, ")")), fill = NULL)+
+  theme_bw(base_size = 12, base_family = "Times")  
+  ggsave("Figure_5.pdf", width = 16, height = 15, units = "cm") 
+  ggsave("Figure_5.png", width = 16, height = 15, units = "cm")
 ```
 
 ### Wilcoxon tests
@@ -761,14 +791,16 @@ res.wilcox_N2O
               Max = max(Total_FCO2eq, na.rm = T),
               Q1 = quantile(Total_FCO2eq, na.rm = T, probs = 0.25),
               Q3 = quantile(Total_FCO2eq, na.rm = T, probs = 0.75),
-              IQR = IQR(Total_FCO2eq, na.rm = T))
+              IQR = IQR(Total_FCO2eq, na.rm = T),
+              Mean = mean(Total_FCO2eq, na.rm = T))
   data_l %>% group_by(variable, Naturalization) %>% 
     summarise(Median = median(Flux_CO2eq, na.rm = T),
               Min = min(Flux_CO2eq, na.rm = T),
               Max = max(Flux_CO2eq, na.rm = T),
               Q1 = quantile(Flux_CO2eq, na.rm = T, probs = 0.25),
               Q3 = quantile(Flux_CO2eq, na.rm = T, probs = 0.75),
-              IQR = IQR(Flux_CO2eq, na.rm = T))
+              IQR = IQR(Flux_CO2eq, na.rm = T),
+              Mean = mean(Flux_CO2eq, na.rm = T))
   
   #% calculate per pond and summarise by Naturalization
   Contribution <- data_l %>% left_join(select(data_total_l, - Log_Total_FCO2eq)) %>% 
@@ -782,7 +814,8 @@ res.wilcox_N2O
               Max = max(Per_contribution, na.rm = T),
               Q1 = quantile(Per_contribution, na.rm = T, probs = 0.25),
               Q3 = quantile(Per_contribution, na.rm = T, probs = 0.75),
-              IQR = IQR(Per_contribution, na.rm = T))
+              IQR = IQR(Per_contribution, na.rm = T),
+              Mean = mean(Per_contribution, na.rm = T))
 
 ##Calculation of the relevance of this GHGs emission
   #The per capita emission in Barcelona in 2022 was ~ 2.1 t CO2eq 
