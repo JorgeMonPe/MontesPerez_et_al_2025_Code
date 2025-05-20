@@ -38,6 +38,8 @@ library(errors)
 library(factoextra)
 library(gridExtra)
 library(ggfortify)
+library(knitr)
+library(kableExtra)
 ```
 
 ```{r AUP PCA}
@@ -329,23 +331,39 @@ data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
 ```{r}
 ##Summary
   data_l %>% drop_errors() %>% group_by(variable) %>% 
-    summarise(Median = median(uatm, na.rm = T),
+    summarise(Mean = mean(uatm, na.rm = T),
+              Sd = sd(uatm, na.rm = T),
+              Median = median(uatm, na.rm = T),
+              Q1 = quantile(uatm, 0.25, na.rm = T),
+              Q3 = quantile(uatm, 0.75, na.rm = T),
               Min = min(uatm, na.rm = T),
               Max = max(uatm, na.rm = T),
-              Q1 = quantile(uatm, na.rm = T, probs = 0.25),
-              Q3 = quantile(uatm, na.rm = T, probs = 0.75),
-              IQR = IQR(uatm, na.rm = T),
-              Mean = mean(uatm, na.rm = T))
+              SE = sd(uatm, na.rm = T)/sqrt(sum(!is.na(uatm))), #Not considering NAs
+              n = sum(!is.na(uatm)))%>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE,
+                position = "center") %>%
+  scroll_box(width = "100%", height = "400px")
   
   #Per group
   data_l %>% drop_errors() %>% group_by(variable, Naturalization, Season) %>%
-    summarise(Median = median(uatm, na.rm = T),
+    summarise(Mean = mean(uatm, na.rm = T),
+              Sd = sd(uatm, na.rm = T),
+              Median = median(uatm, na.rm = T),
+              Q1 = quantile(uatm, 0.25, na.rm = T),
+              Q3 = quantile(uatm, 0.75, na.rm = T),
               Min = min(uatm, na.rm = T),
               Max = max(uatm, na.rm = T),
-              Q1 = quantile(uatm, na.rm = T, probs = 0.25),
-              Q3 = quantile(uatm, na.rm = T, probs = 0.75),
-              IQR = IQR(uatm, na.rm = T),
-              Mean = mean(uatm, na.rm = T))
+              SE = sd(uatm, na.rm = T)/sqrt(sum(!is.na(uatm))), #Not considering NAs
+              n = sum(!is.na(uatm)))%>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE,
+                position = "center") %>%
+  scroll_box(width = "100%", height = "400px")
 ```
 
 
@@ -651,8 +669,6 @@ ggsave("Figure_S3.png", width = 16, height = 15, units = "cm")
 
 
 ```{r, Table models}
-  library(knitr)
-  library(kableExtra)
   Table_models %>%
   mutate(across(where(is.numeric), ~ round(.x, 2))) %>%
   kable() %>%
