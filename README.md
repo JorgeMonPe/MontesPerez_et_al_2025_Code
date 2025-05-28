@@ -1,6 +1,6 @@
 # Reproduce this analysis
 
-This repository contains the code to reproduce the results of the article: **Impact of Naturalization on Greenhouse Gas Dynamics in Artificial Urban Ponds - Montes-Pérez et al., 2025** ADD DOI.
+This repository contains the code to reproduce the results of the article: **Naturalization of Artificial Urban Ponds Alters Greenhouse Gas Dynamics - Montes-Pérez et al., 2025**.
 
 **During the revision process:**<br>
 Reviewers can download the dataset using the provided link and credentials. Once downloaded, the files should be placed in the folder named `rawdata` for the R Markdown document to run properly.

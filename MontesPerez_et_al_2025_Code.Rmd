@@ -19,9 +19,222 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
 # Introduction
 
-This is the code used to generated results and plots presented in ---- research article.
+This is the code used to generated results and plots presented in **Naturalization of Artificial Urban Ponds Alters Greenhouse Gas Dynamics - Montes-Pérez et al., 2025** research article.
 
 # Download data from EDI repository
+
+```{r , echo=TRUE, results='hide', message=FALSE, warning=FALSE}
+library(tidyverse)
+options(HTTPUserAgent="EDI_CodeGen")
+
+#Download Ponds_GHG_EnvironmentalVars-----
+  inUrl1  <- "https://pasta.lternet.edu/package/data/eml/edi/1927/1/3e128569a1bbc4f38cc88bd46e8a310b" 
+  infile1 <- tempfile()
+  try(download.file(inUrl1,infile1,method="curl",extra=paste0(' -A "',getOption("HTTPUserAgent"),'"')))
+  if (is.na(file.size(infile1))) download.file(inUrl1,infile1,method="auto")
+  
+  read.csv(infile1)
+  dt1 <-read.csv(infile1,header=F 
+                 ,skip=1
+                 ,sep=","  
+                 ,quot='"' 
+                 , col.names=c(
+                   "Pond_name",     
+                   "Latitude",     
+                   "Longitude",     
+                   "Pond_code",     
+                   "Season",     
+                   "TimeOfDay",     
+                   "Date",     
+                   "Naturalization",     
+                   "Temp_C",     
+                   "CH4_uatm",     
+                   "CO2_uatm",     
+                   "N2O_uatm",     
+                   "K_ppm",     
+                   "Sr_ppm",     
+                   "Mg_ppm",     
+                   "Ca_ppm",     
+                   "Na_ppm",     
+                   "S_ppm",     
+                   "Si_ppm",     
+                   "Fe_ppb",     
+                   "Mn_ppb",     
+                   "DOC_mgL",     
+                   "TDN_mgL",     
+                   "Chla_ugL",     
+                   "Pheo_ugL",     
+                   "TP_mgL",     
+                   "Cl_mgL",     
+                   "SO4_mgL",     
+                   "NO3_mgL",     
+                   "Perc_SurfaceCover",     
+                   "Perc_SubsurfaceCover",     
+                   "Conductivity_uScm",     
+                   "DO_mgL",     
+                   "DO_perc",     
+                   "pH",     
+                   "Surface_m2",     
+                   "volume_m3"    ), check.names=TRUE)
+  
+  unlink(infile1)
+  
+  # Fix any interval or ratio columns mistakenly read in as nominal and nominal columns read as numeric or dates read as strings
+  
+  if (class(dt1$Pond_name)!="factor") dt1$Pond_name<- as.factor(dt1$Pond_name)
+  if (class(dt1$Latitude)=="factor") dt1$Latitude <-as.numeric(levels(dt1$Latitude))[as.integer(dt1$Latitude) ]               
+  if (class(dt1$Latitude)=="character") dt1$Latitude <-as.numeric(dt1$Latitude)
+  if (class(dt1$Longitude)=="factor") dt1$Longitude <-as.numeric(levels(dt1$Longitude))[as.integer(dt1$Longitude) ]               
+  if (class(dt1$Longitude)=="character") dt1$Longitude <-as.numeric(dt1$Longitude)
+  if (class(dt1$Pond_code)!="factor") dt1$Pond_code<- as.factor(dt1$Pond_code)
+  if (class(dt1$Season)!="factor") dt1$Season<- as.factor(dt1$Season)
+  if (class(dt1$TimeOfDay)!="factor") dt1$TimeOfDay<- as.factor(dt1$TimeOfDay)                                   
+  # attempting to convert dt1$Date dateTime string to R date structure (date or POSIXct)                                
+  tmpDateFormat<-"%Y-%m-%d"
+  tmp1Date<-as.Date(dt1$Date,format=tmpDateFormat)
+  # Keep the new dates only if they all converted correctly
+  if(nrow(dt1[dt1$Date != "",]) == length(tmp1Date[!is.na(tmp1Date)])){dt1$Date <- tmp1Date } else {print("Date conversion failed for dt1$Date. Please inspect the data and do the date conversion yourself.")}                                                                    
+  
+  if (class(dt1$Naturalization)!="factor") dt1$Naturalization<- as.factor(dt1$Naturalization)
+  if (class(dt1$Temp_C)=="factor") dt1$Temp_C <-as.numeric(levels(dt1$Temp_C))[as.integer(dt1$Temp_C) ]               
+  if (class(dt1$Temp_C)=="character") dt1$Temp_C <-as.numeric(dt1$Temp_C)
+  if (class(dt1$CH4_uatm)=="factor") dt1$CH4_uatm <-as.numeric(levels(dt1$CH4_uatm))[as.integer(dt1$CH4_uatm) ]               
+  if (class(dt1$CH4_uatm)=="character") dt1$CH4_uatm <-as.numeric(dt1$CH4_uatm)
+  if (class(dt1$CO2_uatm)=="factor") dt1$CO2_uatm <-as.numeric(levels(dt1$CO2_uatm))[as.integer(dt1$CO2_uatm) ]               
+  if (class(dt1$CO2_uatm)=="character") dt1$CO2_uatm <-as.numeric(dt1$CO2_uatm)
+  if (class(dt1$N2O_uatm)=="factor") dt1$N2O_uatm <-as.numeric(levels(dt1$N2O_uatm))[as.integer(dt1$N2O_uatm) ]               
+  if (class(dt1$N2O_uatm)=="character") dt1$N2O_uatm <-as.numeric(dt1$N2O_uatm)
+  if (class(dt1$K_ppm)=="factor") dt1$K_ppm <-as.numeric(levels(dt1$K_ppm))[as.integer(dt1$K_ppm) ]               
+  if (class(dt1$K_ppm)=="character") dt1$K_ppm <-as.numeric(dt1$K_ppm)
+  if (class(dt1$Sr_ppm)=="factor") dt1$Sr_ppm <-as.numeric(levels(dt1$Sr_ppm))[as.integer(dt1$Sr_ppm) ]               
+  if (class(dt1$Sr_ppm)=="character") dt1$Sr_ppm <-as.numeric(dt1$Sr_ppm)
+  if (class(dt1$Mg_ppm)=="factor") dt1$Mg_ppm <-as.numeric(levels(dt1$Mg_ppm))[as.integer(dt1$Mg_ppm) ]               
+  if (class(dt1$Mg_ppm)=="character") dt1$Mg_ppm <-as.numeric(dt1$Mg_ppm)
+  if (class(dt1$Ca_ppm)=="factor") dt1$Ca_ppm <-as.numeric(levels(dt1$Ca_ppm))[as.integer(dt1$Ca_ppm) ]               
+  if (class(dt1$Ca_ppm)=="character") dt1$Ca_ppm <-as.numeric(dt1$Ca_ppm)
+  if (class(dt1$Na_ppm)=="factor") dt1$Na_ppm <-as.numeric(levels(dt1$Na_ppm))[as.integer(dt1$Na_ppm) ]               
+  if (class(dt1$Na_ppm)=="character") dt1$Na_ppm <-as.numeric(dt1$Na_ppm)
+  if (class(dt1$S_ppm)=="factor") dt1$S_ppm <-as.numeric(levels(dt1$S_ppm))[as.integer(dt1$S_ppm) ]               
+  if (class(dt1$S_ppm)=="character") dt1$S_ppm <-as.numeric(dt1$S_ppm)
+  if (class(dt1$Si_ppm)=="factor") dt1$Si_ppm <-as.numeric(levels(dt1$Si_ppm))[as.integer(dt1$Si_ppm) ]               
+  if (class(dt1$Si_ppm)=="character") dt1$Si_ppm <-as.numeric(dt1$Si_ppm)
+  if (class(dt1$Fe_ppb)=="factor") dt1$Fe_ppb <-as.numeric(levels(dt1$Fe_ppb))[as.integer(dt1$Fe_ppb) ]               
+  if (class(dt1$Fe_ppb)=="character") dt1$Fe_ppb <-as.numeric(dt1$Fe_ppb)
+  if (class(dt1$Mn_ppb)=="factor") dt1$Mn_ppb <-as.numeric(levels(dt1$Mn_ppb))[as.integer(dt1$Mn_ppb) ]               
+  if (class(dt1$Mn_ppb)=="character") dt1$Mn_ppb <-as.numeric(dt1$Mn_ppb)
+  if (class(dt1$DOC_mgL)=="factor") dt1$DOC_mgL <-as.numeric(levels(dt1$DOC_mgL))[as.integer(dt1$DOC_mgL) ]               
+  if (class(dt1$DOC_mgL)=="character") dt1$DOC_mgL <-as.numeric(dt1$DOC_mgL)
+  if (class(dt1$TDN_mgL)=="factor") dt1$TDN_mgL <-as.numeric(levels(dt1$TDN_mgL))[as.integer(dt1$TDN_mgL) ]               
+  if (class(dt1$TDN_mgL)=="character") dt1$TDN_mgL <-as.numeric(dt1$TDN_mgL)
+  if (class(dt1$Chla_ugL)=="factor") dt1$Chla_ugL <-as.numeric(levels(dt1$Chla_ugL))[as.integer(dt1$Chla_ugL) ]               
+  if (class(dt1$Chla_ugL)=="character") dt1$Chla_ugL <-as.numeric(dt1$Chla_ugL)
+  if (class(dt1$Pheo_ugL)=="factor") dt1$Pheo_ugL <-as.numeric(levels(dt1$Pheo_ugL))[as.integer(dt1$Pheo_ugL) ]               
+  if (class(dt1$Pheo_ugL)=="character") dt1$Pheo_ugL <-as.numeric(dt1$Pheo_ugL)
+  if (class(dt1$TP_mgL)=="factor") dt1$TP_mgL <-as.numeric(levels(dt1$TP_mgL))[as.integer(dt1$TP_mgL) ]               
+  if (class(dt1$TP_mgL)=="character") dt1$TP_mgL <-as.numeric(dt1$TP_mgL)
+  if (class(dt1$Cl_mgL)=="factor") dt1$Cl_mgL <-as.numeric(levels(dt1$Cl_mgL))[as.integer(dt1$Cl_mgL) ]               
+  if (class(dt1$Cl_mgL)=="character") dt1$Cl_mgL <-as.numeric(dt1$Cl_mgL)
+  if (class(dt1$SO4_mgL)=="factor") dt1$SO4_mgL <-as.numeric(levels(dt1$SO4_mgL))[as.integer(dt1$SO4_mgL) ]               
+  if (class(dt1$SO4_mgL)=="character") dt1$SO4_mgL <-as.numeric(dt1$SO4_mgL)
+  if (class(dt1$NO3_mgL)=="factor") dt1$NO3_mgL <-as.numeric(levels(dt1$NO3_mgL))[as.integer(dt1$NO3_mgL) ]               
+  if (class(dt1$NO3_mgL)=="character") dt1$NO3_mgL <-as.numeric(dt1$NO3_mgL)
+  if (class(dt1$Perc_SurfaceCover)=="factor") dt1$Perc_SurfaceCover <-as.numeric(levels(dt1$Perc_SurfaceCover))[as.integer(dt1$Perc_SurfaceCover) ]               
+  if (class(dt1$Perc_SurfaceCover)=="character") dt1$Perc_SurfaceCover <-as.numeric(dt1$Perc_SurfaceCover)
+  if (class(dt1$Perc_SubsurfaceCover)=="factor") dt1$Perc_SubsurfaceCover <-as.numeric(levels(dt1$Perc_SubsurfaceCover))[as.integer(dt1$Perc_SubsurfaceCover) ]               
+  if (class(dt1$Perc_SubsurfaceCover)=="character") dt1$Perc_SubsurfaceCover <-as.numeric(dt1$Perc_SubsurfaceCover)
+  if (class(dt1$Conductivity_uScm)=="factor") dt1$Conductivity_uScm <-as.numeric(levels(dt1$Conductivity_uScm))[as.integer(dt1$Conductivity_uScm) ]               
+  if (class(dt1$Conductivity_uScm)=="character") dt1$Conductivity_uScm <-as.numeric(dt1$Conductivity_uScm)
+  if (class(dt1$DO_mgL)=="factor") dt1$DO_mgL <-as.numeric(levels(dt1$DO_mgL))[as.integer(dt1$DO_mgL) ]               
+  if (class(dt1$DO_mgL)=="character") dt1$DO_mgL <-as.numeric(dt1$DO_mgL)
+  if (class(dt1$DO_perc)=="factor") dt1$DO_perc <-as.numeric(levels(dt1$DO_perc))[as.integer(dt1$DO_perc) ]               
+  if (class(dt1$DO_perc)=="character") dt1$DO_perc <-as.numeric(dt1$DO_perc)
+  if (class(dt1$pH)=="factor") dt1$pH <-as.numeric(levels(dt1$pH))[as.integer(dt1$pH) ]               
+  if (class(dt1$pH)=="character") dt1$pH <-as.numeric(dt1$pH)
+  if (class(dt1$Surface_m2)=="factor") dt1$Surface_m2 <-as.numeric(levels(dt1$Surface_m2))[as.integer(dt1$Surface_m2) ]               
+  if (class(dt1$Surface_m2)=="character") dt1$Surface_m2 <-as.numeric(dt1$Surface_m2)
+  if (class(dt1$volume_m3)=="factor") dt1$volume_m3 <-as.numeric(levels(dt1$volume_m3))[as.integer(dt1$volume_m3) ]               
+  if (class(dt1$volume_m3)=="character") dt1$volume_m3 <-as.numeric(dt1$volume_m3)
+  
+  # Convert Missing Values to NA for non-dates
+  
+  dt1$CH4_uatm <- ifelse((trimws(as.character(dt1$CH4_uatm))==trimws("NA")),NA,dt1$CH4_uatm)               
+  suppressWarnings(dt1$CH4_uatm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$CH4_uatm))==as.character(as.numeric("NA"))),NA,dt1$CH4_uatm))
+  dt1$CO2_uatm <- ifelse((trimws(as.character(dt1$CO2_uatm))==trimws("NA")),NA,dt1$CO2_uatm)               
+  suppressWarnings(dt1$CO2_uatm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$CO2_uatm))==as.character(as.numeric("NA"))),NA,dt1$CO2_uatm))
+  dt1$K_ppm <- ifelse((trimws(as.character(dt1$K_ppm))==trimws("NA")),NA,dt1$K_ppm)               
+  suppressWarnings(dt1$K_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$K_ppm))==as.character(as.numeric("NA"))),NA,dt1$K_ppm))
+  dt1$Sr_ppm <- ifelse((trimws(as.character(dt1$Sr_ppm))==trimws("NA")),NA,dt1$Sr_ppm)               
+  suppressWarnings(dt1$Sr_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Sr_ppm))==as.character(as.numeric("NA"))),NA,dt1$Sr_ppm))
+  dt1$Mg_ppm <- ifelse((trimws(as.character(dt1$Mg_ppm))==trimws("NA")),NA,dt1$Mg_ppm)               
+  suppressWarnings(dt1$Mg_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Mg_ppm))==as.character(as.numeric("NA"))),NA,dt1$Mg_ppm))
+  dt1$S_ppm <- ifelse((trimws(as.character(dt1$S_ppm))==trimws("NA")),NA,dt1$S_ppm)               
+  suppressWarnings(dt1$S_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$S_ppm))==as.character(as.numeric("NA"))),NA,dt1$S_ppm))
+  dt1$Si_ppm <- ifelse((trimws(as.character(dt1$Si_ppm))==trimws("NA")),NA,dt1$Si_ppm)               
+  suppressWarnings(dt1$Si_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Si_ppm))==as.character(as.numeric("NA"))),NA,dt1$Si_ppm))
+  dt1$Fe_ppb <- ifelse((trimws(as.character(dt1$Fe_ppb))==trimws("NA")),NA,dt1$Fe_ppb)               
+  suppressWarnings(dt1$Fe_ppb <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Fe_ppb))==as.character(as.numeric("NA"))),NA,dt1$Fe_ppb))
+  dt1$Mn_ppb <- ifelse((trimws(as.character(dt1$Mn_ppb))==trimws("NA")),NA,dt1$Mn_ppb)               
+  suppressWarnings(dt1$Mn_ppb <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Mn_ppb))==as.character(as.numeric("NA"))),NA,dt1$Mn_ppb))
+  dt1$Pheo_ugL <- ifelse((trimws(as.character(dt1$Pheo_ugL))==trimws("NA")),NA,dt1$Pheo_ugL)               
+  suppressWarnings(dt1$Pheo_ugL <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Pheo_ugL))==as.character(as.numeric("NA"))),NA,dt1$Pheo_ugL))
+  dt1$SO4_mgL <- ifelse((trimws(as.character(dt1$SO4_mgL))==trimws("NA")),NA,dt1$SO4_mgL)               
+  suppressWarnings(dt1$SO4_mgL <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$SO4_mgL))==as.character(as.numeric("NA"))),NA,dt1$SO4_mgL))
+  dt1$NO3_mgL <- ifelse((trimws(as.character(dt1$NO3_mgL))==trimws("NA")),NA,dt1$NO3_mgL)               
+  suppressWarnings(dt1$NO3_mgL <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$NO3_mgL))==as.character(as.numeric("NA"))),NA,dt1$NO3_mgL))
+
+#Download CO2eq----
+  inUrl2  <- "https://pasta.lternet.edu/package/data/eml/edi/1927/1/1588bee09b6afab3fcd7670f839659e9" 
+  infile2 <- tempfile()
+  try(download.file(inUrl2,infile2,method="curl",extra=paste0(' -A "',getOption("HTTPUserAgent"),'"')))
+  if (is.na(file.size(infile2))) download.file(inUrl2,infile2,method="auto")
+  read.csv(infile2)
+  
+  dt2 <-read.csv(infile2,header=F 
+                 ,skip=1
+                 ,sep=","  
+                 ,quot='"' 
+                 , col.names=c(
+                   "Pond_name",     
+                   "Pond_code",     
+                   "Season",     
+                   "TimeOfDay",     
+                   "Naturalization",     
+                   "Date",     
+                   "FCH4_mgCO2eqm2d1",     
+                   "FCO2_mgCO2eqm2d1",     
+                   "FN2O_mgCO2eqm2d1"    ), check.names=TRUE)
+  
+  unlink(infile2)
+  
+  # Fix any interval or ratio columns mistakenly read in as nominal and nominal columns read as numeric or dates read as strings
+  
+  if (class(dt2$Pond_name)!="factor") dt2$Pond_name<- as.factor(dt2$Pond_name)
+  if (class(dt2$Pond_code)!="factor") dt2$Pond_code<- as.factor(dt2$Pond_code)
+  if (class(dt2$Season)!="factor") dt2$Season<- as.factor(dt2$Season)
+  if (class(dt2$TimeOfDay)!="factor") dt2$TimeOfDay<- as.factor(dt2$TimeOfDay)
+  if (class(dt2$Naturalization)!="factor") dt2$Naturalization<- as.factor(dt2$Naturalization)                                   
+  # attempting to convert dt2$Date dateTime string to R date structure (date or POSIXct)                                
+  tmpDateFormat<-"%Y-%m-%d"
+  tmp2Date<-as.Date(dt2$Date,format=tmpDateFormat)
+  # Keep the new dates only if they all converted correctly
+  if(nrow(dt2[dt2$Date != "",]) == length(tmp2Date[!is.na(tmp2Date)])){dt2$Date <- tmp2Date } else {print("Date conversion failed for dt2$Date. Please inspect the data and do the date conversion yourself.")}                                                                    
+  
+  if (class(dt2$FCH4_mgCO2eqm2d1)=="factor") dt2$FCH4_mgCO2eqm2d1 <-as.numeric(levels(dt2$FCH4_mgCO2eqm2d1))[as.integer(dt2$FCH4_mgCO2eqm2d1) ]               
+  if (class(dt2$FCH4_mgCO2eqm2d1)=="character") dt2$FCH4_mgCO2eqm2d1 <-as.numeric(dt2$FCH4_mgCO2eqm2d1)
+  if (class(dt2$FCO2_mgCO2eqm2d1)=="factor") dt2$FCO2_mgCO2eqm2d1 <-as.numeric(levels(dt2$FCO2_mgCO2eqm2d1))[as.integer(dt2$FCO2_mgCO2eqm2d1) ]               
+  if (class(dt2$FCO2_mgCO2eqm2d1)=="character") dt2$FCO2_mgCO2eqm2d1 <-as.numeric(dt2$FCO2_mgCO2eqm2d1)
+  if (class(dt2$FN2O_mgCO2eqm2d1)=="factor") dt2$FN2O_mgCO2eqm2d1 <-as.numeric(levels(dt2$FN2O_mgCO2eqm2d1))[as.integer(dt2$FN2O_mgCO2eqm2d1) ]               
+  if (class(dt2$FN2O_mgCO2eqm2d1)=="character") dt2$FN2O_mgCO2eqm2d1 <-as.numeric(dt2$FN2O_mgCO2eqm2d1)
+  
+  # Convert Missing Values to NA for non-dates
+  
+  dt2$FCO2_mgCO2eqm2d1 <- ifelse((trimws(as.character(dt2$FCO2_mgCO2eqm2d1))==trimws("NA")),NA,dt2$FCO2_mgCO2eqm2d1)               
+  suppressWarnings(dt2$FCO2_mgCO2eqm2d1 <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt2$FCO2_mgCO2eqm2d1))==as.character(as.numeric("NA"))),NA,dt2$FCO2_mgCO2eqm2d1))
+  
+#Save as .csv
+  write_csv(dt1, "rawdata/Ponds_GHG_EnvironmentalVars.csv")
+  write_csv(dt2, "rawdata/CO2eq.csv")
+```
 
 
 
