@@ -2,11 +2,9 @@
 
 This repository contains the code to reproduce the results of the article: **Naturalization of Artificial Urban Ponds Alters Greenhouse Gas Dynamics - Montes-Pérez et al., 2025**.
 
-**During the revision process:**<br>
-Reviewers can download the dataset using the provided link and credentials. Once downloaded, the files should be placed in the folder named `rawdata` for the R Markdown document to run properly.
+The R Markdown file will automatically download the data from the [Environmental Data Initiative (EDI) repository](https://edirepository.org/).
 
-**After acceptance:**<br>
-The code will be published on Zenodo, and the R Markdown file will automatically download the data from the [Environmental Data Initiative (EDI) repository](https://edirepository.org/)
+If you prefer to download the data manually, you can access it here: [https://portal.edirepository.org/nis/mapbrowse?packageid=edi.1927.1](https://portal.edirepository.org/nis/mapbrowse?packageid=edi.1927.1)
 
 ## Requirements
 
