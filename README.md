@@ -1,10 +1,10 @@
 # Reproduce this analysis
 
-This repository contains the code to reproduce the results of the article: **Naturalization of Artificial Urban Ponds Alters Greenhouse Gas Dynamics - Montes-Pérez et al., 2025**.
+This repository contains the code to reproduce the results of the article: **Chlorination Cessation Alters Greenhouse Gas Dynamics in Artificial Urban Ponds - Montes-Pérez et al., 2025**.
 
 The R Markdown file will automatically download the data from the [Environmental Data Initiative (EDI) repository](https://edirepository.org/).
 
-If you prefer to download the data manually, you can access it here: [https://portal.edirepository.org/nis/mapbrowse?packageid=edi.1927.1](https://portal.edirepository.org/nis/mapbrowse?packageid=edi.1927.1)
+If you prefer to download the data manually, you can access it here: [https://portal.edirepository.org/nis/mapbrowse?packageid=edi.1927.2](https://portal.edirepository.org/nis/mapbrowse?packageid=edi.1927.2)
 
 ## Requirements
 
