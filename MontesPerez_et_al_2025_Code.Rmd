@@ -1,5 +1,5 @@
 ---
-title: "Impact of Naturalization on Greenhouse Gas Dynamics in Artificial Urban Ponds"
+title: "Chlorination Cessation Alters Greenhouse Gas Dynamics in Artificial Urban Ponds"
 author: "Jorge Montes Pérez"
 date: "2025-03-05"
 output:
@@ -19,218 +19,228 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
 # Introduction
 
-This is the code used to generated results and plots presented in **Naturalization of Artificial Urban Ponds Alters Greenhouse Gas Dynamics - Montes-Pérez et al., 2025** research article.
+This is the code used to generated results and plots presented in **Chlorination Cessation Alters Greenhouse Gas Dynamics in Artificial Urban Ponds - Montes-Pérez et al., 2025** research article.
 
 # Download data from EDI repository
 
 ```{r , echo=TRUE, results='hide', message=FALSE, warning=FALSE}
 library(tidyverse)
 options(HTTPUserAgent="EDI_CodeGen")
+	      
 
-#Download Ponds_GHG_EnvironmentalVars-----
-  inUrl1  <- "https://pasta.lternet.edu/package/data/eml/edi/1927/1/3e128569a1bbc4f38cc88bd46e8a310b" 
-  infile1 <- tempfile()
-  try(download.file(inUrl1,infile1,method="curl",extra=paste0(' -A "',getOption("HTTPUserAgent"),'"')))
-  if (is.na(file.size(infile1))) download.file(inUrl1,infile1,method="auto")
-  
-  read.csv(infile1)
-  dt1 <-read.csv(infile1,header=F 
-                 ,skip=1
-                 ,sep=","  
-                 ,quot='"' 
-                 , col.names=c(
-                   "Pond_name",     
-                   "Latitude",     
-                   "Longitude",     
-                   "Pond_code",     
-                   "Season",     
-                   "TimeOfDay",     
-                   "Date",     
-                   "Naturalization",     
-                   "Temp_C",     
-                   "CH4_uatm",     
-                   "CO2_uatm",     
-                   "N2O_uatm",     
-                   "K_ppm",     
-                   "Sr_ppm",     
-                   "Mg_ppm",     
-                   "Ca_ppm",     
-                   "Na_ppm",     
-                   "S_ppm",     
-                   "Si_ppm",     
-                   "Fe_ppb",     
-                   "Mn_ppb",     
-                   "DOC_mgL",     
-                   "TDN_mgL",     
-                   "Chla_ugL",     
-                   "Pheo_ugL",     
-                   "TP_mgL",     
-                   "Cl_mgL",     
-                   "SO4_mgL",     
-                   "NO3_mgL",     
-                   "Perc_SurfaceCover",     
-                   "Perc_SubsurfaceCover",     
-                   "Conductivity_uScm",     
-                   "DO_mgL",     
-                   "DO_perc",     
-                   "pH",     
-                   "Surface_m2",     
-                   "volume_m3"    ), check.names=TRUE)
-  
-  unlink(infile1)
-  
-  # Fix any interval or ratio columns mistakenly read in as nominal and nominal columns read as numeric or dates read as strings
-  
-  if (class(dt1$Pond_name)!="factor") dt1$Pond_name<- as.factor(dt1$Pond_name)
-  if (class(dt1$Latitude)=="factor") dt1$Latitude <-as.numeric(levels(dt1$Latitude))[as.integer(dt1$Latitude) ]               
-  if (class(dt1$Latitude)=="character") dt1$Latitude <-as.numeric(dt1$Latitude)
-  if (class(dt1$Longitude)=="factor") dt1$Longitude <-as.numeric(levels(dt1$Longitude))[as.integer(dt1$Longitude) ]               
-  if (class(dt1$Longitude)=="character") dt1$Longitude <-as.numeric(dt1$Longitude)
-  if (class(dt1$Pond_code)!="factor") dt1$Pond_code<- as.factor(dt1$Pond_code)
-  if (class(dt1$Season)!="factor") dt1$Season<- as.factor(dt1$Season)
-  if (class(dt1$TimeOfDay)!="factor") dt1$TimeOfDay<- as.factor(dt1$TimeOfDay)                                   
-  # attempting to convert dt1$Date dateTime string to R date structure (date or POSIXct)                                
-  tmpDateFormat<-"%Y-%m-%d"
-  tmp1Date<-as.Date(dt1$Date,format=tmpDateFormat)
-  # Keep the new dates only if they all converted correctly
-  if(nrow(dt1[dt1$Date != "",]) == length(tmp1Date[!is.na(tmp1Date)])){dt1$Date <- tmp1Date } else {print("Date conversion failed for dt1$Date. Please inspect the data and do the date conversion yourself.")}                                                                    
-  
-  if (class(dt1$Naturalization)!="factor") dt1$Naturalization<- as.factor(dt1$Naturalization)
-  if (class(dt1$Temp_C)=="factor") dt1$Temp_C <-as.numeric(levels(dt1$Temp_C))[as.integer(dt1$Temp_C) ]               
-  if (class(dt1$Temp_C)=="character") dt1$Temp_C <-as.numeric(dt1$Temp_C)
-  if (class(dt1$CH4_uatm)=="factor") dt1$CH4_uatm <-as.numeric(levels(dt1$CH4_uatm))[as.integer(dt1$CH4_uatm) ]               
-  if (class(dt1$CH4_uatm)=="character") dt1$CH4_uatm <-as.numeric(dt1$CH4_uatm)
-  if (class(dt1$CO2_uatm)=="factor") dt1$CO2_uatm <-as.numeric(levels(dt1$CO2_uatm))[as.integer(dt1$CO2_uatm) ]               
-  if (class(dt1$CO2_uatm)=="character") dt1$CO2_uatm <-as.numeric(dt1$CO2_uatm)
-  if (class(dt1$N2O_uatm)=="factor") dt1$N2O_uatm <-as.numeric(levels(dt1$N2O_uatm))[as.integer(dt1$N2O_uatm) ]               
-  if (class(dt1$N2O_uatm)=="character") dt1$N2O_uatm <-as.numeric(dt1$N2O_uatm)
-  if (class(dt1$K_ppm)=="factor") dt1$K_ppm <-as.numeric(levels(dt1$K_ppm))[as.integer(dt1$K_ppm) ]               
-  if (class(dt1$K_ppm)=="character") dt1$K_ppm <-as.numeric(dt1$K_ppm)
-  if (class(dt1$Sr_ppm)=="factor") dt1$Sr_ppm <-as.numeric(levels(dt1$Sr_ppm))[as.integer(dt1$Sr_ppm) ]               
-  if (class(dt1$Sr_ppm)=="character") dt1$Sr_ppm <-as.numeric(dt1$Sr_ppm)
-  if (class(dt1$Mg_ppm)=="factor") dt1$Mg_ppm <-as.numeric(levels(dt1$Mg_ppm))[as.integer(dt1$Mg_ppm) ]               
-  if (class(dt1$Mg_ppm)=="character") dt1$Mg_ppm <-as.numeric(dt1$Mg_ppm)
-  if (class(dt1$Ca_ppm)=="factor") dt1$Ca_ppm <-as.numeric(levels(dt1$Ca_ppm))[as.integer(dt1$Ca_ppm) ]               
-  if (class(dt1$Ca_ppm)=="character") dt1$Ca_ppm <-as.numeric(dt1$Ca_ppm)
-  if (class(dt1$Na_ppm)=="factor") dt1$Na_ppm <-as.numeric(levels(dt1$Na_ppm))[as.integer(dt1$Na_ppm) ]               
-  if (class(dt1$Na_ppm)=="character") dt1$Na_ppm <-as.numeric(dt1$Na_ppm)
-  if (class(dt1$S_ppm)=="factor") dt1$S_ppm <-as.numeric(levels(dt1$S_ppm))[as.integer(dt1$S_ppm) ]               
-  if (class(dt1$S_ppm)=="character") dt1$S_ppm <-as.numeric(dt1$S_ppm)
-  if (class(dt1$Si_ppm)=="factor") dt1$Si_ppm <-as.numeric(levels(dt1$Si_ppm))[as.integer(dt1$Si_ppm) ]               
-  if (class(dt1$Si_ppm)=="character") dt1$Si_ppm <-as.numeric(dt1$Si_ppm)
-  if (class(dt1$Fe_ppb)=="factor") dt1$Fe_ppb <-as.numeric(levels(dt1$Fe_ppb))[as.integer(dt1$Fe_ppb) ]               
-  if (class(dt1$Fe_ppb)=="character") dt1$Fe_ppb <-as.numeric(dt1$Fe_ppb)
-  if (class(dt1$Mn_ppb)=="factor") dt1$Mn_ppb <-as.numeric(levels(dt1$Mn_ppb))[as.integer(dt1$Mn_ppb) ]               
-  if (class(dt1$Mn_ppb)=="character") dt1$Mn_ppb <-as.numeric(dt1$Mn_ppb)
-  if (class(dt1$DOC_mgL)=="factor") dt1$DOC_mgL <-as.numeric(levels(dt1$DOC_mgL))[as.integer(dt1$DOC_mgL) ]               
-  if (class(dt1$DOC_mgL)=="character") dt1$DOC_mgL <-as.numeric(dt1$DOC_mgL)
-  if (class(dt1$TDN_mgL)=="factor") dt1$TDN_mgL <-as.numeric(levels(dt1$TDN_mgL))[as.integer(dt1$TDN_mgL) ]               
-  if (class(dt1$TDN_mgL)=="character") dt1$TDN_mgL <-as.numeric(dt1$TDN_mgL)
-  if (class(dt1$Chla_ugL)=="factor") dt1$Chla_ugL <-as.numeric(levels(dt1$Chla_ugL))[as.integer(dt1$Chla_ugL) ]               
-  if (class(dt1$Chla_ugL)=="character") dt1$Chla_ugL <-as.numeric(dt1$Chla_ugL)
-  if (class(dt1$Pheo_ugL)=="factor") dt1$Pheo_ugL <-as.numeric(levels(dt1$Pheo_ugL))[as.integer(dt1$Pheo_ugL) ]               
-  if (class(dt1$Pheo_ugL)=="character") dt1$Pheo_ugL <-as.numeric(dt1$Pheo_ugL)
-  if (class(dt1$TP_mgL)=="factor") dt1$TP_mgL <-as.numeric(levels(dt1$TP_mgL))[as.integer(dt1$TP_mgL) ]               
-  if (class(dt1$TP_mgL)=="character") dt1$TP_mgL <-as.numeric(dt1$TP_mgL)
-  if (class(dt1$Cl_mgL)=="factor") dt1$Cl_mgL <-as.numeric(levels(dt1$Cl_mgL))[as.integer(dt1$Cl_mgL) ]               
-  if (class(dt1$Cl_mgL)=="character") dt1$Cl_mgL <-as.numeric(dt1$Cl_mgL)
-  if (class(dt1$SO4_mgL)=="factor") dt1$SO4_mgL <-as.numeric(levels(dt1$SO4_mgL))[as.integer(dt1$SO4_mgL) ]               
-  if (class(dt1$SO4_mgL)=="character") dt1$SO4_mgL <-as.numeric(dt1$SO4_mgL)
-  if (class(dt1$NO3_mgL)=="factor") dt1$NO3_mgL <-as.numeric(levels(dt1$NO3_mgL))[as.integer(dt1$NO3_mgL) ]               
-  if (class(dt1$NO3_mgL)=="character") dt1$NO3_mgL <-as.numeric(dt1$NO3_mgL)
-  if (class(dt1$Perc_SurfaceCover)=="factor") dt1$Perc_SurfaceCover <-as.numeric(levels(dt1$Perc_SurfaceCover))[as.integer(dt1$Perc_SurfaceCover) ]               
-  if (class(dt1$Perc_SurfaceCover)=="character") dt1$Perc_SurfaceCover <-as.numeric(dt1$Perc_SurfaceCover)
-  if (class(dt1$Perc_SubsurfaceCover)=="factor") dt1$Perc_SubsurfaceCover <-as.numeric(levels(dt1$Perc_SubsurfaceCover))[as.integer(dt1$Perc_SubsurfaceCover) ]               
-  if (class(dt1$Perc_SubsurfaceCover)=="character") dt1$Perc_SubsurfaceCover <-as.numeric(dt1$Perc_SubsurfaceCover)
-  if (class(dt1$Conductivity_uScm)=="factor") dt1$Conductivity_uScm <-as.numeric(levels(dt1$Conductivity_uScm))[as.integer(dt1$Conductivity_uScm) ]               
-  if (class(dt1$Conductivity_uScm)=="character") dt1$Conductivity_uScm <-as.numeric(dt1$Conductivity_uScm)
-  if (class(dt1$DO_mgL)=="factor") dt1$DO_mgL <-as.numeric(levels(dt1$DO_mgL))[as.integer(dt1$DO_mgL) ]               
-  if (class(dt1$DO_mgL)=="character") dt1$DO_mgL <-as.numeric(dt1$DO_mgL)
-  if (class(dt1$DO_perc)=="factor") dt1$DO_perc <-as.numeric(levels(dt1$DO_perc))[as.integer(dt1$DO_perc) ]               
-  if (class(dt1$DO_perc)=="character") dt1$DO_perc <-as.numeric(dt1$DO_perc)
-  if (class(dt1$pH)=="factor") dt1$pH <-as.numeric(levels(dt1$pH))[as.integer(dt1$pH) ]               
-  if (class(dt1$pH)=="character") dt1$pH <-as.numeric(dt1$pH)
-  if (class(dt1$Surface_m2)=="factor") dt1$Surface_m2 <-as.numeric(levels(dt1$Surface_m2))[as.integer(dt1$Surface_m2) ]               
-  if (class(dt1$Surface_m2)=="character") dt1$Surface_m2 <-as.numeric(dt1$Surface_m2)
-  if (class(dt1$volume_m3)=="factor") dt1$volume_m3 <-as.numeric(levels(dt1$volume_m3))[as.integer(dt1$volume_m3) ]               
-  if (class(dt1$volume_m3)=="character") dt1$volume_m3 <-as.numeric(dt1$volume_m3)
-  
-  # Convert Missing Values to NA for non-dates
-  
-  dt1$CH4_uatm <- ifelse((trimws(as.character(dt1$CH4_uatm))==trimws("NA")),NA,dt1$CH4_uatm)               
-  suppressWarnings(dt1$CH4_uatm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$CH4_uatm))==as.character(as.numeric("NA"))),NA,dt1$CH4_uatm))
-  dt1$CO2_uatm <- ifelse((trimws(as.character(dt1$CO2_uatm))==trimws("NA")),NA,dt1$CO2_uatm)               
-  suppressWarnings(dt1$CO2_uatm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$CO2_uatm))==as.character(as.numeric("NA"))),NA,dt1$CO2_uatm))
-  dt1$K_ppm <- ifelse((trimws(as.character(dt1$K_ppm))==trimws("NA")),NA,dt1$K_ppm)               
-  suppressWarnings(dt1$K_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$K_ppm))==as.character(as.numeric("NA"))),NA,dt1$K_ppm))
-  dt1$Sr_ppm <- ifelse((trimws(as.character(dt1$Sr_ppm))==trimws("NA")),NA,dt1$Sr_ppm)               
-  suppressWarnings(dt1$Sr_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Sr_ppm))==as.character(as.numeric("NA"))),NA,dt1$Sr_ppm))
-  dt1$Mg_ppm <- ifelse((trimws(as.character(dt1$Mg_ppm))==trimws("NA")),NA,dt1$Mg_ppm)               
-  suppressWarnings(dt1$Mg_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Mg_ppm))==as.character(as.numeric("NA"))),NA,dt1$Mg_ppm))
-  dt1$S_ppm <- ifelse((trimws(as.character(dt1$S_ppm))==trimws("NA")),NA,dt1$S_ppm)               
-  suppressWarnings(dt1$S_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$S_ppm))==as.character(as.numeric("NA"))),NA,dt1$S_ppm))
-  dt1$Si_ppm <- ifelse((trimws(as.character(dt1$Si_ppm))==trimws("NA")),NA,dt1$Si_ppm)               
-  suppressWarnings(dt1$Si_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Si_ppm))==as.character(as.numeric("NA"))),NA,dt1$Si_ppm))
-  dt1$Fe_ppb <- ifelse((trimws(as.character(dt1$Fe_ppb))==trimws("NA")),NA,dt1$Fe_ppb)               
-  suppressWarnings(dt1$Fe_ppb <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Fe_ppb))==as.character(as.numeric("NA"))),NA,dt1$Fe_ppb))
-  dt1$Mn_ppb <- ifelse((trimws(as.character(dt1$Mn_ppb))==trimws("NA")),NA,dt1$Mn_ppb)               
-  suppressWarnings(dt1$Mn_ppb <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Mn_ppb))==as.character(as.numeric("NA"))),NA,dt1$Mn_ppb))
-  dt1$Pheo_ugL <- ifelse((trimws(as.character(dt1$Pheo_ugL))==trimws("NA")),NA,dt1$Pheo_ugL)               
-  suppressWarnings(dt1$Pheo_ugL <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Pheo_ugL))==as.character(as.numeric("NA"))),NA,dt1$Pheo_ugL))
-  dt1$SO4_mgL <- ifelse((trimws(as.character(dt1$SO4_mgL))==trimws("NA")),NA,dt1$SO4_mgL)               
-  suppressWarnings(dt1$SO4_mgL <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$SO4_mgL))==as.character(as.numeric("NA"))),NA,dt1$SO4_mgL))
-  dt1$NO3_mgL <- ifelse((trimws(as.character(dt1$NO3_mgL))==trimws("NA")),NA,dt1$NO3_mgL)               
-  suppressWarnings(dt1$NO3_mgL <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$NO3_mgL))==as.character(as.numeric("NA"))),NA,dt1$NO3_mgL))
+inUrl1  <- "https://pasta-s.lternet.edu/package/data/eml/edi/1927/2/3e128569a1bbc4f38cc88bd46e8a310b" 
+infile1 <- tempfile()
+try(download.file(inUrl1,infile1,method="curl",extra=paste0(' -A "',getOption("HTTPUserAgent"),'"')))
+if (is.na(file.size(infile1))) download.file(inUrl1,infile1,method="auto")
 
-#Download CO2eq----
-  inUrl2  <- "https://pasta.lternet.edu/package/data/eml/edi/1927/1/1588bee09b6afab3fcd7670f839659e9" 
-  infile2 <- tempfile()
-  try(download.file(inUrl2,infile2,method="curl",extra=paste0(' -A "',getOption("HTTPUserAgent"),'"')))
-  if (is.na(file.size(infile2))) download.file(inUrl2,infile2,method="auto")
-  read.csv(infile2)
-  
-  dt2 <-read.csv(infile2,header=F 
-                 ,skip=1
-                 ,sep=","  
-                 ,quot='"' 
-                 , col.names=c(
-                   "Pond_name",     
-                   "Pond_code",     
-                   "Season",     
-                   "TimeOfDay",     
-                   "Naturalization",     
-                   "Date",     
-                   "FCH4_mgCO2eqm2d1",     
-                   "FCO2_mgCO2eqm2d1",     
-                   "FN2O_mgCO2eqm2d1"    ), check.names=TRUE)
-  
-  unlink(infile2)
-  
-  # Fix any interval or ratio columns mistakenly read in as nominal and nominal columns read as numeric or dates read as strings
-  
-  if (class(dt2$Pond_name)!="factor") dt2$Pond_name<- as.factor(dt2$Pond_name)
-  if (class(dt2$Pond_code)!="factor") dt2$Pond_code<- as.factor(dt2$Pond_code)
-  if (class(dt2$Season)!="factor") dt2$Season<- as.factor(dt2$Season)
-  if (class(dt2$TimeOfDay)!="factor") dt2$TimeOfDay<- as.factor(dt2$TimeOfDay)
-  if (class(dt2$Naturalization)!="factor") dt2$Naturalization<- as.factor(dt2$Naturalization)                                   
-  # attempting to convert dt2$Date dateTime string to R date structure (date or POSIXct)                                
-  tmpDateFormat<-"%Y-%m-%d"
-  tmp2Date<-as.Date(dt2$Date,format=tmpDateFormat)
-  # Keep the new dates only if they all converted correctly
-  if(nrow(dt2[dt2$Date != "",]) == length(tmp2Date[!is.na(tmp2Date)])){dt2$Date <- tmp2Date } else {print("Date conversion failed for dt2$Date. Please inspect the data and do the date conversion yourself.")}                                                                    
-  
-  if (class(dt2$FCH4_mgCO2eqm2d1)=="factor") dt2$FCH4_mgCO2eqm2d1 <-as.numeric(levels(dt2$FCH4_mgCO2eqm2d1))[as.integer(dt2$FCH4_mgCO2eqm2d1) ]               
-  if (class(dt2$FCH4_mgCO2eqm2d1)=="character") dt2$FCH4_mgCO2eqm2d1 <-as.numeric(dt2$FCH4_mgCO2eqm2d1)
-  if (class(dt2$FCO2_mgCO2eqm2d1)=="factor") dt2$FCO2_mgCO2eqm2d1 <-as.numeric(levels(dt2$FCO2_mgCO2eqm2d1))[as.integer(dt2$FCO2_mgCO2eqm2d1) ]               
-  if (class(dt2$FCO2_mgCO2eqm2d1)=="character") dt2$FCO2_mgCO2eqm2d1 <-as.numeric(dt2$FCO2_mgCO2eqm2d1)
-  if (class(dt2$FN2O_mgCO2eqm2d1)=="factor") dt2$FN2O_mgCO2eqm2d1 <-as.numeric(levels(dt2$FN2O_mgCO2eqm2d1))[as.integer(dt2$FN2O_mgCO2eqm2d1) ]               
-  if (class(dt2$FN2O_mgCO2eqm2d1)=="character") dt2$FN2O_mgCO2eqm2d1 <-as.numeric(dt2$FN2O_mgCO2eqm2d1)
-  
-  # Convert Missing Values to NA for non-dates
-  
-  dt2$FCO2_mgCO2eqm2d1 <- ifelse((trimws(as.character(dt2$FCO2_mgCO2eqm2d1))==trimws("NA")),NA,dt2$FCO2_mgCO2eqm2d1)               
-  suppressWarnings(dt2$FCO2_mgCO2eqm2d1 <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt2$FCO2_mgCO2eqm2d1))==as.character(as.numeric("NA"))),NA,dt2$FCO2_mgCO2eqm2d1))
-  
+                   
+ dt1 <-read.csv(infile1,header=F 
+          ,skip=1
+            ,sep=","  
+                ,quot='"' 
+        , col.names=c(
+                    "Pond_name",     
+                    "Latitude",     
+                    "Longitude",     
+                    "Pond_code",     
+                    "Season",     
+                    "TimeOfDay",     
+                    "Date",     
+                    "Chlorination",     
+                    "Temp_C",     
+                    "CH4_uatm",     
+                    "CO2_uatm",     
+                    "N2O_uatm",     
+                    "K_ppm",     
+                    "Sr_ppm",     
+                    "Mg_ppm",     
+                    "Ca_ppm",     
+                    "Na_ppm",     
+                    "S_ppm",     
+                    "Si_ppm",     
+                    "Fe_ppb",     
+                    "Mn_ppb",     
+                    "DOC_mgL",     
+                    "TDN_mgL",     
+                    "Chla_ugL",     
+                    "Pheo_ugL",     
+                    "TP_mgL",     
+                    "Cl_mgL",     
+                    "SO4_mgL",     
+                    "NO3_mgL",     
+                    "Perc_SurfaceCover",     
+                    "Perc_SubsurfaceCover",     
+                    "Conductivity_uScm",     
+                    "DO_mgL",     
+                    "DO_perc",     
+                    "pH",     
+                    "Surface_m2",     
+                    "volume_m3"    ), check.names=TRUE)
+               
+unlink(infile1)
+		    
+# Fix any interval or ratio columns mistakenly read in as nominal and nominal columns read as numeric or dates read as strings
+                
+if (class(dt1$Pond_name)!="factor") dt1$Pond_name<- as.factor(dt1$Pond_name)
+if (class(dt1$Latitude)=="factor") dt1$Latitude <-as.numeric(levels(dt1$Latitude))[as.integer(dt1$Latitude) ]               
+if (class(dt1$Latitude)=="character") dt1$Latitude <-as.numeric(dt1$Latitude)
+if (class(dt1$Longitude)=="factor") dt1$Longitude <-as.numeric(levels(dt1$Longitude))[as.integer(dt1$Longitude) ]               
+if (class(dt1$Longitude)=="character") dt1$Longitude <-as.numeric(dt1$Longitude)
+if (class(dt1$Pond_code)!="factor") dt1$Pond_code<- as.factor(dt1$Pond_code)
+if (class(dt1$Season)!="factor") dt1$Season<- as.factor(dt1$Season)
+if (class(dt1$TimeOfDay)!="factor") dt1$TimeOfDay<- as.factor(dt1$TimeOfDay)                                   
+# attempting to convert dt1$Date dateTime string to R date structure (date or POSIXct)                                
+tmpDateFormat<-"%Y-%m-%d"
+tmp1Date<-as.Date(dt1$Date,format=tmpDateFormat)
+# Keep the new dates only if they all converted correctly
+if(nrow(dt1[dt1$Date != "",]) == length(tmp1Date[!is.na(tmp1Date)])){dt1$Date <- tmp1Date } else {print("Date conversion failed for dt1$Date. Please inspect the data and do the date conversion yourself.")}                                                                    
+                                
+if (class(dt1$Chlorination)!="factor") dt1$Chlorination<- as.factor(dt1$Chlorination)
+if (class(dt1$Temp_C)=="factor") dt1$Temp_C <-as.numeric(levels(dt1$Temp_C))[as.integer(dt1$Temp_C) ]               
+if (class(dt1$Temp_C)=="character") dt1$Temp_C <-as.numeric(dt1$Temp_C)
+if (class(dt1$CH4_uatm)=="factor") dt1$CH4_uatm <-as.numeric(levels(dt1$CH4_uatm))[as.integer(dt1$CH4_uatm) ]               
+if (class(dt1$CH4_uatm)=="character") dt1$CH4_uatm <-as.numeric(dt1$CH4_uatm)
+if (class(dt1$CO2_uatm)=="factor") dt1$CO2_uatm <-as.numeric(levels(dt1$CO2_uatm))[as.integer(dt1$CO2_uatm) ]               
+if (class(dt1$CO2_uatm)=="character") dt1$CO2_uatm <-as.numeric(dt1$CO2_uatm)
+if (class(dt1$N2O_uatm)=="factor") dt1$N2O_uatm <-as.numeric(levels(dt1$N2O_uatm))[as.integer(dt1$N2O_uatm) ]               
+if (class(dt1$N2O_uatm)=="character") dt1$N2O_uatm <-as.numeric(dt1$N2O_uatm)
+if (class(dt1$K_ppm)=="factor") dt1$K_ppm <-as.numeric(levels(dt1$K_ppm))[as.integer(dt1$K_ppm) ]               
+if (class(dt1$K_ppm)=="character") dt1$K_ppm <-as.numeric(dt1$K_ppm)
+if (class(dt1$Sr_ppm)=="factor") dt1$Sr_ppm <-as.numeric(levels(dt1$Sr_ppm))[as.integer(dt1$Sr_ppm) ]               
+if (class(dt1$Sr_ppm)=="character") dt1$Sr_ppm <-as.numeric(dt1$Sr_ppm)
+if (class(dt1$Mg_ppm)=="factor") dt1$Mg_ppm <-as.numeric(levels(dt1$Mg_ppm))[as.integer(dt1$Mg_ppm) ]               
+if (class(dt1$Mg_ppm)=="character") dt1$Mg_ppm <-as.numeric(dt1$Mg_ppm)
+if (class(dt1$Ca_ppm)=="factor") dt1$Ca_ppm <-as.numeric(levels(dt1$Ca_ppm))[as.integer(dt1$Ca_ppm) ]               
+if (class(dt1$Ca_ppm)=="character") dt1$Ca_ppm <-as.numeric(dt1$Ca_ppm)
+if (class(dt1$Na_ppm)=="factor") dt1$Na_ppm <-as.numeric(levels(dt1$Na_ppm))[as.integer(dt1$Na_ppm) ]               
+if (class(dt1$Na_ppm)=="character") dt1$Na_ppm <-as.numeric(dt1$Na_ppm)
+if (class(dt1$S_ppm)=="factor") dt1$S_ppm <-as.numeric(levels(dt1$S_ppm))[as.integer(dt1$S_ppm) ]               
+if (class(dt1$S_ppm)=="character") dt1$S_ppm <-as.numeric(dt1$S_ppm)
+if (class(dt1$Si_ppm)=="factor") dt1$Si_ppm <-as.numeric(levels(dt1$Si_ppm))[as.integer(dt1$Si_ppm) ]               
+if (class(dt1$Si_ppm)=="character") dt1$Si_ppm <-as.numeric(dt1$Si_ppm)
+if (class(dt1$Fe_ppb)=="factor") dt1$Fe_ppb <-as.numeric(levels(dt1$Fe_ppb))[as.integer(dt1$Fe_ppb) ]               
+if (class(dt1$Fe_ppb)=="character") dt1$Fe_ppb <-as.numeric(dt1$Fe_ppb)
+if (class(dt1$Mn_ppb)=="factor") dt1$Mn_ppb <-as.numeric(levels(dt1$Mn_ppb))[as.integer(dt1$Mn_ppb) ]               
+if (class(dt1$Mn_ppb)=="character") dt1$Mn_ppb <-as.numeric(dt1$Mn_ppb)
+if (class(dt1$DOC_mgL)=="factor") dt1$DOC_mgL <-as.numeric(levels(dt1$DOC_mgL))[as.integer(dt1$DOC_mgL) ]               
+if (class(dt1$DOC_mgL)=="character") dt1$DOC_mgL <-as.numeric(dt1$DOC_mgL)
+if (class(dt1$TDN_mgL)=="factor") dt1$TDN_mgL <-as.numeric(levels(dt1$TDN_mgL))[as.integer(dt1$TDN_mgL) ]               
+if (class(dt1$TDN_mgL)=="character") dt1$TDN_mgL <-as.numeric(dt1$TDN_mgL)
+if (class(dt1$Chla_ugL)=="factor") dt1$Chla_ugL <-as.numeric(levels(dt1$Chla_ugL))[as.integer(dt1$Chla_ugL) ]               
+if (class(dt1$Chla_ugL)=="character") dt1$Chla_ugL <-as.numeric(dt1$Chla_ugL)
+if (class(dt1$Pheo_ugL)=="factor") dt1$Pheo_ugL <-as.numeric(levels(dt1$Pheo_ugL))[as.integer(dt1$Pheo_ugL) ]               
+if (class(dt1$Pheo_ugL)=="character") dt1$Pheo_ugL <-as.numeric(dt1$Pheo_ugL)
+if (class(dt1$TP_mgL)=="factor") dt1$TP_mgL <-as.numeric(levels(dt1$TP_mgL))[as.integer(dt1$TP_mgL) ]               
+if (class(dt1$TP_mgL)=="character") dt1$TP_mgL <-as.numeric(dt1$TP_mgL)
+if (class(dt1$Cl_mgL)=="factor") dt1$Cl_mgL <-as.numeric(levels(dt1$Cl_mgL))[as.integer(dt1$Cl_mgL) ]               
+if (class(dt1$Cl_mgL)=="character") dt1$Cl_mgL <-as.numeric(dt1$Cl_mgL)
+if (class(dt1$SO4_mgL)=="factor") dt1$SO4_mgL <-as.numeric(levels(dt1$SO4_mgL))[as.integer(dt1$SO4_mgL) ]               
+if (class(dt1$SO4_mgL)=="character") dt1$SO4_mgL <-as.numeric(dt1$SO4_mgL)
+if (class(dt1$NO3_mgL)=="factor") dt1$NO3_mgL <-as.numeric(levels(dt1$NO3_mgL))[as.integer(dt1$NO3_mgL) ]               
+if (class(dt1$NO3_mgL)=="character") dt1$NO3_mgL <-as.numeric(dt1$NO3_mgL)
+if (class(dt1$Perc_SurfaceCover)=="factor") dt1$Perc_SurfaceCover <-as.numeric(levels(dt1$Perc_SurfaceCover))[as.integer(dt1$Perc_SurfaceCover) ]               
+if (class(dt1$Perc_SurfaceCover)=="character") dt1$Perc_SurfaceCover <-as.numeric(dt1$Perc_SurfaceCover)
+if (class(dt1$Perc_SubsurfaceCover)=="factor") dt1$Perc_SubsurfaceCover <-as.numeric(levels(dt1$Perc_SubsurfaceCover))[as.integer(dt1$Perc_SubsurfaceCover) ]               
+if (class(dt1$Perc_SubsurfaceCover)=="character") dt1$Perc_SubsurfaceCover <-as.numeric(dt1$Perc_SubsurfaceCover)
+if (class(dt1$Conductivity_uScm)=="factor") dt1$Conductivity_uScm <-as.numeric(levels(dt1$Conductivity_uScm))[as.integer(dt1$Conductivity_uScm) ]               
+if (class(dt1$Conductivity_uScm)=="character") dt1$Conductivity_uScm <-as.numeric(dt1$Conductivity_uScm)
+if (class(dt1$DO_mgL)=="factor") dt1$DO_mgL <-as.numeric(levels(dt1$DO_mgL))[as.integer(dt1$DO_mgL) ]               
+if (class(dt1$DO_mgL)=="character") dt1$DO_mgL <-as.numeric(dt1$DO_mgL)
+if (class(dt1$DO_perc)=="factor") dt1$DO_perc <-as.numeric(levels(dt1$DO_perc))[as.integer(dt1$DO_perc) ]               
+if (class(dt1$DO_perc)=="character") dt1$DO_perc <-as.numeric(dt1$DO_perc)
+if (class(dt1$pH)=="factor") dt1$pH <-as.numeric(levels(dt1$pH))[as.integer(dt1$pH) ]               
+if (class(dt1$pH)=="character") dt1$pH <-as.numeric(dt1$pH)
+if (class(dt1$Surface_m2)=="factor") dt1$Surface_m2 <-as.numeric(levels(dt1$Surface_m2))[as.integer(dt1$Surface_m2) ]               
+if (class(dt1$Surface_m2)=="character") dt1$Surface_m2 <-as.numeric(dt1$Surface_m2)
+if (class(dt1$volume_m3)=="factor") dt1$volume_m3 <-as.numeric(levels(dt1$volume_m3))[as.integer(dt1$volume_m3) ]               
+if (class(dt1$volume_m3)=="character") dt1$volume_m3 <-as.numeric(dt1$volume_m3)
+                
+# Convert Missing Values to NA for non-dates
+                
+dt1$CH4_uatm <- ifelse((trimws(as.character(dt1$CH4_uatm))==trimws("NA")),NA,dt1$CH4_uatm)               
+suppressWarnings(dt1$CH4_uatm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$CH4_uatm))==as.character(as.numeric("NA"))),NA,dt1$CH4_uatm))
+dt1$CO2_uatm <- ifelse((trimws(as.character(dt1$CO2_uatm))==trimws("NA")),NA,dt1$CO2_uatm)               
+suppressWarnings(dt1$CO2_uatm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$CO2_uatm))==as.character(as.numeric("NA"))),NA,dt1$CO2_uatm))
+dt1$K_ppm <- ifelse((trimws(as.character(dt1$K_ppm))==trimws("NA")),NA,dt1$K_ppm)               
+suppressWarnings(dt1$K_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$K_ppm))==as.character(as.numeric("NA"))),NA,dt1$K_ppm))
+dt1$Sr_ppm <- ifelse((trimws(as.character(dt1$Sr_ppm))==trimws("NA")),NA,dt1$Sr_ppm)               
+suppressWarnings(dt1$Sr_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Sr_ppm))==as.character(as.numeric("NA"))),NA,dt1$Sr_ppm))
+dt1$Mg_ppm <- ifelse((trimws(as.character(dt1$Mg_ppm))==trimws("NA")),NA,dt1$Mg_ppm)               
+suppressWarnings(dt1$Mg_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Mg_ppm))==as.character(as.numeric("NA"))),NA,dt1$Mg_ppm))
+dt1$S_ppm <- ifelse((trimws(as.character(dt1$S_ppm))==trimws("NA")),NA,dt1$S_ppm)               
+suppressWarnings(dt1$S_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$S_ppm))==as.character(as.numeric("NA"))),NA,dt1$S_ppm))
+dt1$Si_ppm <- ifelse((trimws(as.character(dt1$Si_ppm))==trimws("NA")),NA,dt1$Si_ppm)               
+suppressWarnings(dt1$Si_ppm <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Si_ppm))==as.character(as.numeric("NA"))),NA,dt1$Si_ppm))
+dt1$Fe_ppb <- ifelse((trimws(as.character(dt1$Fe_ppb))==trimws("NA")),NA,dt1$Fe_ppb)               
+suppressWarnings(dt1$Fe_ppb <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Fe_ppb))==as.character(as.numeric("NA"))),NA,dt1$Fe_ppb))
+dt1$Mn_ppb <- ifelse((trimws(as.character(dt1$Mn_ppb))==trimws("NA")),NA,dt1$Mn_ppb)               
+suppressWarnings(dt1$Mn_ppb <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Mn_ppb))==as.character(as.numeric("NA"))),NA,dt1$Mn_ppb))
+dt1$Pheo_ugL <- ifelse((trimws(as.character(dt1$Pheo_ugL))==trimws("NA")),NA,dt1$Pheo_ugL)               
+suppressWarnings(dt1$Pheo_ugL <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Pheo_ugL))==as.character(as.numeric("NA"))),NA,dt1$Pheo_ugL))
+dt1$SO4_mgL <- ifelse((trimws(as.character(dt1$SO4_mgL))==trimws("NA")),NA,dt1$SO4_mgL)               
+suppressWarnings(dt1$SO4_mgL <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$SO4_mgL))==as.character(as.numeric("NA"))),NA,dt1$SO4_mgL))
+dt1$NO3_mgL <- ifelse((trimws(as.character(dt1$NO3_mgL))==trimws("NA")),NA,dt1$NO3_mgL)               
+suppressWarnings(dt1$NO3_mgL <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$NO3_mgL))==as.character(as.numeric("NA"))),NA,dt1$NO3_mgL))
+
+
+# Here is the structure of the input data frame:
+str(dt1)                            
+attach(dt1)                            
+
+inUrl2  <- "https://pasta-s.lternet.edu/package/data/eml/edi/1927/2/1588bee09b6afab3fcd7670f839659e9" 
+infile2 <- tempfile()
+try(download.file(inUrl2,infile2,method="curl",extra=paste0(' -A "',getOption("HTTPUserAgent"),'"')))
+if (is.na(file.size(infile2))) download.file(inUrl2,infile2,method="auto")
+
+                   
+ dt2 <-read.csv(infile2,header=F 
+          ,skip=1
+            ,sep=","  
+                ,quot='"' 
+        , col.names=c(
+                    "Pond_name",     
+                    "Pond_code",     
+                    "Season",     
+                    "TimeOfDay",     
+                    "Chlorination",     
+                    "Date",     
+                    "FCH4_mgCO2eqm2d1",     
+                    "FCO2_mgCO2eqm2d1",     
+                    "FN2O_mgCO2eqm2d1"    ), check.names=TRUE)
+               
+unlink(infile2)
+		    
+# Fix any interval or ratio columns mistakenly read in as nominal and nominal columns read as numeric or dates read as strings
+                
+if (class(dt2$Pond_name)!="factor") dt2$Pond_name<- as.factor(dt2$Pond_name)
+if (class(dt2$Pond_code)!="factor") dt2$Pond_code<- as.factor(dt2$Pond_code)
+if (class(dt2$Season)!="factor") dt2$Season<- as.factor(dt2$Season)
+if (class(dt2$TimeOfDay)!="factor") dt2$TimeOfDay<- as.factor(dt2$TimeOfDay)
+if (class(dt2$Chlorination)!="factor") dt2$Chlorination<- as.factor(dt2$Chlorination)                                   
+# attempting to convert dt2$Date dateTime string to R date structure (date or POSIXct)                                
+tmpDateFormat<-"%Y-%m-%d"
+tmp2Date<-as.Date(dt2$Date,format=tmpDateFormat)
+# Keep the new dates only if they all converted correctly
+if(nrow(dt2[dt2$Date != "",]) == length(tmp2Date[!is.na(tmp2Date)])){dt2$Date <- tmp2Date } else {print("Date conversion failed for dt2$Date. Please inspect the data and do the date conversion yourself.")}                                                                    
+                                
+if (class(dt2$FCH4_mgCO2eqm2d1)=="factor") dt2$FCH4_mgCO2eqm2d1 <-as.numeric(levels(dt2$FCH4_mgCO2eqm2d1))[as.integer(dt2$FCH4_mgCO2eqm2d1) ]               
+if (class(dt2$FCH4_mgCO2eqm2d1)=="character") dt2$FCH4_mgCO2eqm2d1 <-as.numeric(dt2$FCH4_mgCO2eqm2d1)
+if (class(dt2$FCO2_mgCO2eqm2d1)=="factor") dt2$FCO2_mgCO2eqm2d1 <-as.numeric(levels(dt2$FCO2_mgCO2eqm2d1))[as.integer(dt2$FCO2_mgCO2eqm2d1) ]               
+if (class(dt2$FCO2_mgCO2eqm2d1)=="character") dt2$FCO2_mgCO2eqm2d1 <-as.numeric(dt2$FCO2_mgCO2eqm2d1)
+if (class(dt2$FN2O_mgCO2eqm2d1)=="factor") dt2$FN2O_mgCO2eqm2d1 <-as.numeric(levels(dt2$FN2O_mgCO2eqm2d1))[as.integer(dt2$FN2O_mgCO2eqm2d1) ]               
+if (class(dt2$FN2O_mgCO2eqm2d1)=="character") dt2$FN2O_mgCO2eqm2d1 <-as.numeric(dt2$FN2O_mgCO2eqm2d1)
+                
+# Convert Missing Values to NA for non-dates
+                
+dt2$FCO2_mgCO2eqm2d1 <- ifelse((trimws(as.character(dt2$FCO2_mgCO2eqm2d1))==trimws("NA")),NA,dt2$FCO2_mgCO2eqm2d1)               
+suppressWarnings(dt2$FCO2_mgCO2eqm2d1 <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt2$FCO2_mgCO2eqm2d1))==as.character(as.numeric("NA"))),NA,dt2$FCO2_mgCO2eqm2d1))
+
+
+# Here is the structure of the input data frame:
+str(dt2)                            
+attach(dt2)      
+
+# The analyses below are basic descriptions of the variables. After testing, they should be replaced.      
 #Save as .csv
   write_csv(dt1, "rawdata/Ponds_GHG_EnvironmentalVars.csv")
   write_csv(dt2, "rawdata/CO2eq.csv")
@@ -258,12 +268,14 @@ library(kableExtra)
 ```{r AUP PCA}
 #Import data
   data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
+  data <- data %>%
+    mutate(Chlorination = fct_relevel(Chlorination, "Yes", "No"))
   
 #Select variables for PCA
   #Just day time measurements
     day <- data %>% filter(TimeOfDay == "Day")
     #Remove categorical vars and latitude and longitude
-    data_PCA <- day %>% select(-c("Latitude","Longitude", "Pond_name", "Pond_code", "Season","TimeOfDay", "Date", "Naturalization"))
+    data_PCA <- day %>% select(-c("Latitude","Longitude", "Pond_name", "Pond_code", "Season","TimeOfDay", "Date", "Chlorination"))
     
   
 #When I have NAs, it is because the values were below the detection limit ~ 0
@@ -318,7 +330,7 @@ library(kableExtra)
 
 ```{r}
   #Firsts two components
-  plot_PC1_PC2 <- autoplot(pca_todo, x=1, y = 2, data = day, fill = "Naturalization", shape = 21, size = 3,
+  plot_PC1_PC2 <- autoplot(pca_todo, x=1, y = 2, data = day, fill = "Chlorination", shape = 21, size = 3,
                            loadings = TRUE, loadings.colour = 'gray',
                            loadings.label = TRUE, loadings.label.size = 3, loadings.label.colour = "black",
                            loadings.label.repel=T,
@@ -349,11 +361,13 @@ library(kableExtra)
 ```{r}
 #Import data
 data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
+data <- data %>%
+    mutate(Chlorination = fct_relevel(Chlorination, "Yes", "No"))
   
   #Day data
   data <- data %>% filter(TimeOfDay == "Day")
   #Select GHGs data
-  data <- data %>% select(Pond_name, Pond_code, Season, TimeOfDay, Naturalization, Date, CH4_uatm, CO2_uatm, N2O_uatm)
+  data <- data %>% select(Pond_name, Pond_code, Season, TimeOfDay, Chlorination, Date, CH4_uatm, CO2_uatm, N2O_uatm)
   
 ```
 
@@ -364,46 +378,46 @@ data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
   #- No significant outliers, normality, Homogeneity of variance
   #Identify outliers
   data_trans <- data %>% mutate(across(c(CH4_uatm, CO2_uatm, N2O_uatm), ~log(.)))
-  data_trans %>% group_by(Naturalization, Season) %>% identify_outliers(CH4_uatm) %>% filter(is.extreme == "TRUE")
-  data_trans %>% group_by(Naturalization, Season) %>% identify_outliers(CO2_uatm) %>% filter(is.extreme == "TRUE")
-  data_trans %>% group_by(Naturalization, Season) %>% identify_outliers(N2O_uatm) %>% filter(is.extreme == "TRUE")
+  data_trans %>% group_by(Chlorination, Season) %>% identify_outliers(CH4_uatm) %>% filter(is.extreme == "TRUE")
+  data_trans %>% group_by(Chlorination, Season) %>% identify_outliers(CO2_uatm) %>% filter(is.extreme == "TRUE")
+  data_trans %>% group_by(Chlorination, Season) %>% identify_outliers(N2O_uatm) %>% filter(is.extreme == "TRUE")
   
   #Checking normality
-  data_trans %>% group_by(Naturalization, Season) %>% shapiro_test(CH4_uatm)
-  data_trans %>% group_by(Naturalization, Season) %>% shapiro_test(CO2_uatm)
-  data_trans %>% group_by(Naturalization, Season) %>% shapiro_test(N2O_uatm)
+  data_trans %>% group_by(Chlorination, Season) %>% shapiro_test(CH4_uatm)
+  data_trans %>% group_by(Chlorination, Season) %>% shapiro_test(CO2_uatm)
+  data_trans %>% group_by(Chlorination, Season) %>% shapiro_test(N2O_uatm)
   
   #Check homogeneity
   data_trans %>%
     group_by(Season) %>%
-    levene_test(CH4_uatm ~ Naturalization)
+    levene_test(CH4_uatm ~ Chlorination)
   data_trans %>%
     group_by(Season) %>%
-    levene_test(CO2_uatm ~ Naturalization)
+    levene_test(CO2_uatm ~ Chlorination)
   data_trans %>%
     group_by(Season) %>%
-    levene_test(N2O_uatm ~ Naturalization)
+    levene_test(N2O_uatm ~ Chlorination)
 
 ##Perform the ANOVA====  
   ##ANOVA TWO-FACTORS repeated measurements
   data_trans <- data_trans %>% mutate(Pond_name = as.factor(Pond_name))
   ##CH4
-  res.aov_CH4 <- anova_test(data = data_trans, dv = CH4_uatm, wid = Pond_name, between = Naturalization, within = Season)
+  res.aov_CH4 <- anova_test(data = data_trans, dv = CH4_uatm, wid = Pond_name, between = Chlorination, within = Season)
   get_anova_table(res.aov_CH4)
   #CO2
-  res.aov_CO2 <- anova_test(data = data_trans, dv = CO2_uatm, wid = Pond_name, between = Naturalization, within = Season)
+  res.aov_CO2 <- anova_test(data = data_trans, dv = CO2_uatm, wid = Pond_name, between = Chlorination, within = Season)
   get_anova_table(res.aov_CO2)
   
 ##Non parametric test for N2O====
   #Linear mixed models
-  data_trans <- data_trans %>% mutate(Naturalization = as.factor(Naturalization), Season = as.factor(Season))
+  data_trans <- data_trans %>% mutate(Chlorination = as.factor(Chlorination), Season = as.factor(Season))
   
   #N2O  
-  model <- lmer(N2O_uatm ~ Naturalization * Season + (1 | Pond_name), data = data_trans)
+  model <- lmer(N2O_uatm ~ Chlorination * Season + (1 | Pond_name), data = data_trans)
   resid_panel(model)
   summary(model)
   anova(model, ddf = "Kenward-Roger")
-  Posthoc_N2O <- emmeans(model, specs = c("Naturalization", "Season"))
+  Posthoc_N2O <- emmeans(model, specs = c("Chlorination", "Season"))
   intervals <- contrast(Posthoc_N2O, method = "pairwise", adjust = "tukey")
   intervals_pairwise_N2O <- confint(intervals)
   Posthoc_N2O <- pairs(Posthoc_N2O, adjust = "tukey") %>% as_data_frame()
@@ -428,11 +442,11 @@ data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
     #TUKEY
   Pond_name <- factor(data_trans$Pond_name)
   Season <- factor(data_trans$Season)
-  Naturalization <- factor(data_trans$Naturalization)
+  Chlorination <- factor(data_trans$Chlorination)
   CH4_uatm <- data_trans$CH4_uatm
-  tukey_CH4 <- tukey_hsd(res.aov_CH4, CH4_uatm ~ Season*Naturalization)
+  tukey_CH4 <- tukey_hsd(res.aov_CH4, CH4_uatm ~ Season*Chlorination)
   CO2_uatm <- data_trans$CO2_uatm
-  tukey_CO2 <- tukey_hsd(res.aov_CO2, CO2_uatm ~ Season*Naturalization)
+  tukey_CO2 <- tukey_hsd(res.aov_CO2, CO2_uatm ~ Season*Chlorination)
 
   #Export
   print("CH4")
@@ -481,11 +495,11 @@ data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
   pvalues <- Posthoc_N2O$p.value
   factores <- Posthoc_N2O$contrast
   factores <- str_split_fixed(factores, " - ", 2) %>% as.data.frame()
-  factores <-factores %>% separate_wider_delim(V1, delim = " ", names = c("V1_Naturalization", "V1_Season"))
-  factores <-factores %>% separate_wider_delim(V2, delim = " ", names = c("V2_Naturalization", "V2_Season"))
+  factores <-factores %>% separate_wider_delim(V1, delim = " ", names = c("V1_Chlorination", "V1_Season"))
+  factores <-factores %>% separate_wider_delim(V2, delim = " ", names = c("V2_Chlorination", "V2_Season"))
   
   #Similar format than CO2 and CH4
-  factores <- factores %>% mutate(Reconstruido = paste(paste(V1_Season, V1_Naturalization, sep = ":"), paste(V2_Season, V2_Naturalization, sep = ":"), sep = "-"))
+  factores <- factores %>% mutate(Reconstruido = paste(paste(V1_Season, V1_Chlorination, sep = ":"), paste(V2_Season, V2_Chlorination, sep = ":"), sep = "-"))
   
   names(pvalues) <- factores$Reconstruido
   
@@ -501,11 +515,11 @@ data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
   
   #Df letter and combinations
   data_comb <- data %>%
-    mutate(Combination = paste(Season, Naturalization, sep = ":")) 
+    mutate(Combination = paste(Season, Chlorination, sep = ":")) 
   
 ##Join letter for plotting
   #long format
-  data_l <- data_comb %>%  pivot_longer(-c(Pond_name, Pond_code, Season, TimeOfDay, Naturalization, Date, Combination), names_to = "variable", values_to = "uatm")
+  data_l <- data_comb %>%  pivot_longer(-c(Pond_name, Pond_code, Season, TimeOfDay, Chlorination, Date, Combination), names_to = "variable", values_to = "uatm")
   
   #Join with letters
   data_l <- data_l %>% left_join(letters)
@@ -523,7 +537,7 @@ data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
   data_l <- data_l %>% mutate(variable = fct_relevel(variable, "CO2_uatm"))
   
 ##-------------PLOT - LOG SCALE Y-AXIS-----------------
-  ggplot(data_l, aes(x = Season, y = uatm, fill = Naturalization))+
+  ggplot(data_l, aes(x = Season, y = uatm, fill = Chlorination))+
     geom_violin(trim = F)+
     geom_text(aes(label = Letters, y = label_y), position = position_dodge(width = 0.8), vjust = -5, family = "Times") +
     geom_jitter(alpha = 0.4,position=position_jitterdodge(jitter.width = 0.2, dodge.width = 0.9), shape = 21)+
@@ -531,7 +545,7 @@ data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
     scale_linetype_manual(values = 2)+
     scale_fill_manual(values = c("#99ccff","#739900"))+
     scale_y_log10(expand = expansion(mult = c(0.1, 0.2)), labels = scales::label_number(accuracy = 1, big.mark = ","), guide = "axis_logticks")+
-    labs(x = "Naturalization", y = expression(paste("Partial pressure (", mu, "atm)")), linetype = NULL)+
+    labs(x = "Chlorination", y = expression(paste("Partial pressure (", mu, "atm)")), linetype = NULL)+
     facet_wrap(~variable, scales = "free", labeller = as_labeller(c(CH4_uatm = "CH[4]", CO2_uatm = "CO[2]", N2O_uatm = "N[2]*O"), default = label_parsed))+
     theme_bw(base_size = 12, base_family = "Times")+
     theme(legend.position = "bottom", text = element_text(family = "Times"))
@@ -561,7 +575,7 @@ data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
   scroll_box(width = "100%", height = "400px")
   
   #Per group
-  data_l %>% drop_errors() %>% group_by(variable, Naturalization, Season) %>%
+  data_l %>% drop_errors() %>% group_by(variable, Chlorination, Season) %>%
     summarise(Mean = mean(uatm, na.rm = T),
               Sd = sd(uatm, na.rm = T),
               Median = median(uatm, na.rm = T),
@@ -594,6 +608,8 @@ library(ggpubr)
 
 #Import data
 data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
+data <- data %>%
+    mutate(Chlorination = fct_relevel(Chlorination, "Yes", "No"))
 
 #Ponds sampled at night
 night <- data %>% filter(TimeOfDay == "Night")
@@ -601,7 +617,7 @@ night <- data %>% filter(TimeOfDay == "Night")
 data <- data %>% filter(Pond_code %in% night$Pond_code)
 
 #GHGs data
-data <- data %>% select(Pond_name, Pond_code, Season, TimeOfDay, Naturalization, Date, CH4_uatm, CO2_uatm, N2O_uatm)
+data <- data %>% select(Pond_name, Pond_code, Season, TimeOfDay, Chlorination, Date, CH4_uatm, CO2_uatm, N2O_uatm)
 
 
 #Log transformation before perform the analyses
@@ -613,51 +629,51 @@ data_trans <- drop_errors(data_trans) %>% ungroup()
 #- Outliers, normality, Homogeneity of variance
 #Identify outliers
 data_trans <- data %>% mutate(across(c(CH4_uatm, CO2_uatm, N2O_uatm), ~log(.)))
-data_trans %>% group_by(Naturalization, TimeOfDay) %>% identify_outliers(CH4_uatm) %>% filter(is.extrem = FALSE)
-data_trans %>% group_by(Naturalization, TimeOfDay) %>% identify_outliers(CO2_uatm) %>% filter(is.extrem = FALSE)
-data_trans %>% group_by(Naturalization, TimeOfDay) %>% identify_outliers(N2O_uatm) %>% filter(is.extrem = FALSE)
+data_trans %>% group_by(Chlorination, TimeOfDay) %>% identify_outliers(CH4_uatm) %>% filter(is.extrem = FALSE)
+data_trans %>% group_by(Chlorination, TimeOfDay) %>% identify_outliers(CO2_uatm) %>% filter(is.extrem = FALSE)
+data_trans %>% group_by(Chlorination, TimeOfDay) %>% identify_outliers(N2O_uatm) %>% filter(is.extrem = FALSE)
 
 #Checking normality
-data_trans %>% group_by(Naturalization, Season, TimeOfDay) %>% shapiro_test(CH4_uatm)
-data_trans %>% group_by(Naturalization, Season, TimeOfDay) %>% shapiro_test(CO2_uatm)
-data_trans %>% group_by(Naturalization, Season, TimeOfDay) %>% shapiro_test(N2O_uatm)
+data_trans %>% group_by(Chlorination, Season, TimeOfDay) %>% shapiro_test(CH4_uatm)
+data_trans %>% group_by(Chlorination, Season, TimeOfDay) %>% shapiro_test(CO2_uatm)
+data_trans %>% group_by(Chlorination, Season, TimeOfDay) %>% shapiro_test(N2O_uatm)
 
 #Check homogeneity
 data_trans %>%
-  group_by(Season, Naturalization) %>%
+  group_by(Season, Chlorination) %>%
   levene_test(CH4_uatm ~ TimeOfDay)
 data_trans %>%
-  group_by(Season, Naturalization) %>%
+  group_by(Season, Chlorination) %>%
   levene_test(CO2_uatm ~ TimeOfDay)
 data_trans %>%
-  group_by(Season, Naturalization) %>%
+  group_by(Season, Chlorination) %>%
   levene_test(N2O_uatm ~ TimeOfDay)
 
 
 ##Transform
-  data_trans_l <- data_trans %>% select(Season, TimeOfDay, Naturalization, CH4_uatm, CO2_uatm, N2O_uatm) %>% 
-    pivot_longer(-c(Season, TimeOfDay, Naturalization), names_to = "Species")
+  data_trans_l <- data_trans %>% select(Season, TimeOfDay, Chlorination, CH4_uatm, CO2_uatm, N2O_uatm) %>% 
+    pivot_longer(-c(Season, TimeOfDay, Chlorination), names_to = "Species")
   
   #T_test
   options(width = 200)
   #CO2
   data_trans_l %>% filter(Species == "CO2_uatm") %>%
-    group_by(Naturalization, Season) %>% 
+    group_by(Chlorination, Season) %>% 
     t_test(value ~ TimeOfDay, paired = T)%>%
     adjust_pvalue(method = "holm")
   #CH4
   data_trans_l %>% filter(Species == "CH4_uatm") %>%
-    group_by(Naturalization, Season) %>% 
+    group_by(Chlorination, Season) %>% 
     t_test(value ~ TimeOfDay, paired = T)%>%
     adjust_pvalue(method = "holm")
   #N2O
   data_trans_l %>% filter(Species == "N2O_uatm") %>%
-    group_by(Naturalization, Season) %>% 
+    group_by(Chlorination, Season) %>% 
     t_test(value ~ TimeOfDay, paired = T)%>%
     adjust_pvalue(method = "holm")
 
   ##-------------LOG SCALE Y-AXIS-----------------
-  data_l <- data %>% pivot_longer(-c(Pond_name, Pond_code, Season, TimeOfDay, Naturalization, Date), names_to = "variable", values_to = "uatm")
+  data_l <- data %>% pivot_longer(-c(Pond_name, Pond_code, Season, TimeOfDay, Chlorination, Date), names_to = "variable", values_to = "uatm")
   #Description plots
   #I add atmosphere references values
   data_l <- data_l %>% mutate(Atm_ref = case_when(variable == "CH4_uatm" ~ 1.92026,
@@ -672,7 +688,7 @@ data_trans %>%
 ### Figure 4
 
 ```{r plot 4, fig.height=7.87, fig.width=5.91}
-ggplot(data_l, aes(x = Naturalization, y = uatm, fill = interaction(Naturalization, TimeOfDay, sep = "-", lex.order = T)))+
+ggplot(data_l, aes(x = Chlorination, y = uatm, fill = interaction(Chlorination, TimeOfDay, sep = "-", lex.order = T)))+
   geom_violin(trim = F)+
   #geom_text(aes(label = Letters, y = label_y), position = position_dodge(width = 0.8), vjust = -2.5) +
   #stat_compare_means(method = "t.test", label = "p.signif", comparisons = my_comparisons)+
@@ -684,7 +700,7 @@ ggplot(data_l, aes(x = Naturalization, y = uatm, fill = interaction(Naturalizati
   scale_fill_manual(values=c("#E0F0FF","#99ccff", "#BFD47F","#739900"))+
   scale_alpha_manual(values = c(1, 0.2))+ 
   scale_y_log10(expand = expansion(mult = c(0.1, 0.12)), labels = scales::label_number(accuracy = 1, big.mark = ","), guide = "axis_logticks")+
-  labs(x = "Naturalization", y = expression(paste("Partial pressure (", mu, "atm)")), linetype = NULL, fill = "Naturalization - Time of Day", color = NULL)+
+  labs(x = "Chlorination", y = expression(paste("Partial pressure (", mu, "atm)")), linetype = NULL, fill = "Chlorination - Time of Day", color = NULL)+
   facet_grid(variable~Season, scales = "free_y", labeller = labeller(variable = as_labeller(c(CH4_uatm = "CH[4]", CO2_uatm = "CO[2]", N2O_uatm = "N[2]*O"), default = label_parsed)))+
   theme_bw(base_size = 12, base_family = "Times")+
   guides(fill = guide_legend(title.position = "top", 
@@ -713,6 +729,8 @@ ggplot(data_l, aes(x = Naturalization, y = uatm, fill = interaction(Naturalizati
 
   #Import data
   data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
+  data <- data %>%
+    mutate(Chlorination = fct_relevel(Chlorination, "Yes", "No"))
   #Day data
   data <- data %>% filter(TimeOfDay == "Day")
   
@@ -730,7 +748,7 @@ ggplot(data_l, aes(x = Naturalization, y = uatm, fill = interaction(Naturalizati
   
   ##Residual distribution
   Data_l <- data %>% select(-c(Date)) %>%
-    pivot_longer(-c(TimeOfDay, Pond_name, Pond_code, Naturalization, Season), names_to =  "variable")
+    pivot_longer(-c(TimeOfDay, Pond_name, Pond_code, Chlorination, Season), names_to =  "variable")
   ggplot(Data_l, aes(sample = value))+
     stat_qq()+
     stat_qq_line()+
@@ -753,7 +771,7 @@ ggplot(data_l, aes(x = Naturalization, y = uatm, fill = interaction(Naturalizati
   
   #Explore collinearity
   #Select just numerical variables
-  data_num <- data %>% select(-c(TimeOfDay, Pond_name, Pond_code, Naturalization, Season, Date))
+  data_num <- data %>% select(-c(TimeOfDay, Pond_name, Pond_code, Chlorination, Season, Date))
   
   #Inf as NAs
   cor_matrix <- cor(data_num, use = "pairwise.complete.obs")
@@ -769,7 +787,7 @@ ggplot(data_l, aes(x = Naturalization, y = uatm, fill = interaction(Naturalizati
   
   #For CH4
   #Step wise regression
-  CH4 <- data %>% select(-c(CO2_uatm, N2O_uatm, Pond_name,Pond_code, Season, TimeOfDay, Naturalization, Date))
+  CH4 <- data %>% select(-c(CO2_uatm, N2O_uatm, Pond_name,Pond_code, Season, TimeOfDay, Chlorination, Date))
   CH4 <- drop_errors(CH4)
   any(is.na(CH4))
   sapply(CH4, function(col) any(is.infinite(col)))
@@ -783,7 +801,7 @@ ggplot(data_l, aes(x = Naturalization, y = uatm, fill = interaction(Naturalizati
   
   #For CO2
   #Step wise regression
-  CO2 <- data %>% select(-c(CH4_uatm, N2O_uatm, Pond_name,Pond_code, Season, TimeOfDay, Naturalization, Date))
+  CO2 <- data %>% select(-c(CH4_uatm, N2O_uatm, Pond_name,Pond_code, Season, TimeOfDay, Chlorination, Date))
   
   modelCO2 <- lm(CO2_uatm ~ ., data = CO2)
 
@@ -796,7 +814,7 @@ ggplot(data_l, aes(x = Naturalization, y = uatm, fill = interaction(Naturalizati
   
   #For N2O
   #Step wise regression
-  N2O <- data %>% select(-c(CO2_uatm, CH4_uatm, Pond_name,Pond_code, Season, TimeOfDay, Naturalization, Date))
+  N2O <- data %>% select(-c(CO2_uatm, CH4_uatm, Pond_name,Pond_code, Season, TimeOfDay, Chlorination, Date))
   
   modelN2O <- lm(N2O_uatm ~ ., data = N2O)
   
@@ -903,9 +921,11 @@ ggsave("Figure_S3.png", width = 16, height = 15, units = "cm")
 
 #Import data
   data <- read_csv("rawdata/CO2eq.csv")
+  data <- data %>%
+  mutate(Chlorination = fct_relevel(Chlorination, "Yes", "No"))
 
   #long format
-  data_l <- data %>%  pivot_longer(-c(Pond_name, Pond_code, Season, TimeOfDay, Naturalization, Date), names_to = "variable", values_to = "Flux_CO2eq")
+  data_l <- data %>%  pivot_longer(-c(Pond_name, Pond_code, Season, TimeOfDay, Chlorination, Date), names_to = "variable", values_to = "Flux_CO2eq")
 
   #reorder variables
   data_l <- data_l %>% mutate(variable = fct_relevel(variable, "FCO2_mgCO2eqm2d1"))
@@ -916,15 +936,16 @@ ggsave("Figure_S3.png", width = 16, height = 15, units = "cm")
 ```{r}
   #Plot
   #Mean between summer and winter
-  data_l <- data_l %>% group_by(Naturalization, variable, Pond_name) %>% 
+  data_l <- data_l %>% group_by(Chlorination, variable, Pond_name) %>% 
     summarise(Flux_CO2eq = mean(Flux_CO2eq, na.rm = T)) %>% 
     ungroup()
-  add_total_flux <- data_l %>% group_by(Naturalization, Pond_name) %>% summarise(Flux_CO2eq = sum(Flux_CO2eq)) %>% 
+  add_total_flux <- data_l %>% group_by(Chlorination, Pond_name) %>% summarise(Flux_CO2eq = sum(Flux_CO2eq)) %>% 
   ungroup()  %>% 
   mutate(variable = "Total")
 
 data_l %>% bind_rows(add_total_flux) %>% 
-  ggplot(aes(x = Naturalization, y = Flux_CO2eq, fill = variable))+
+  mutate(variable = fct_relevel(variable, "FCO2_mgCO2eqm2d1")) %>% 
+  ggplot(aes(x = Chlorination, y = Flux_CO2eq, fill = variable))+
   geom_boxplot()+
   stat_summary(fun = mean, geom = "point", shape = 8, size = 2, color = "black", position = position_dodge(width = 0.75))+
   geom_hline(yintercept = 0)+
@@ -939,40 +960,40 @@ data_l %>% bind_rows(add_total_flux) %>%
 ### Wilcoxon tests
 ```{r, results='hide'}
 #Mean per pond (winter and summer))  
-  # data_l <- data_l %>% group_by(Pond_name, Naturalization, variable) %>% summarise(Flux_CO2eq = mean(Flux_CO2eq)) %>% 
+  # data_l <- data_l %>% group_by(Pond_name, Chlorination, variable) %>% summarise(Flux_CO2eq = mean(Flux_CO2eq)) %>% 
   #   ungroup()
   #Transform data
   CH4 <- data_l %>% filter(variable == "FCH4_mgCO2eqm2d1") %>% mutate(Flux_CO2eq = log(Flux_CO2eq))
   #Check outlier, normality and homogeneity
-  CH4 %>% group_by(Naturalization, variable) %>% identify_outliers(Flux_CO2eq) %>% filter(is.extreme == "TRUE")
-  CH4 %>% group_by(Naturalization) %>% shapiro_test(Flux_CO2eq)
-  CH4 %>% levene_test(Flux_CO2eq ~ Naturalization)
+  CH4 %>% group_by(Chlorination, variable) %>% identify_outliers(Flux_CO2eq) %>% filter(is.extreme == "TRUE")
+  CH4 %>% group_by(Chlorination) %>% shapiro_test(Flux_CO2eq)
+  CH4 %>% levene_test(Flux_CO2eq ~ Chlorination)
   ##Wilcoxon (U man whitney)
-  res.wilcox_CH4 <- wilcox_test(data = CH4, Flux_CO2eq ~ Naturalization)
+  res.wilcox_CH4 <- wilcox_test(data = CH4, Flux_CO2eq ~ Chlorination)
   
   
 #CO2  
   #Transform data
   CO2 <- data_l %>% filter(variable == "FCO2_mgCO2eqm2d1") %>% mutate(Flux_CO2eq = log(abs(Flux_CO2eq))*sign(Flux_CO2eq))
   #Check outlier, normality and homogeneity
-  CO2 %>% group_by(Naturalization, variable) %>% identify_outliers(Flux_CO2eq)%>% filter(is.extreme == "TRUE")
-  CO2 %>% group_by(Naturalization) %>% shapiro_test(Flux_CO2eq)
-  CO2 %>% drop_errors()%>% levene_test(Flux_CO2eq ~ Naturalization)
+  CO2 %>% group_by(Chlorination, variable) %>% identify_outliers(Flux_CO2eq)%>% filter(is.extreme == "TRUE")
+  CO2 %>% group_by(Chlorination) %>% shapiro_test(Flux_CO2eq)
+  CO2 %>% drop_errors()%>% levene_test(Flux_CO2eq ~ Chlorination)
   
   #Wilcoxon
-  res.wilcox_CO2 <- wilcox_test(data = CO2, Flux_CO2eq ~ Naturalization)
+  res.wilcox_CO2 <- wilcox_test(data = CO2, Flux_CO2eq ~ Chlorination)
   res.wilcox_CO2
 
 #N2O
   #Transform data
   N2O <-  data_l %>% filter(variable == "FN2O_mgCO2eqm2d1") %>% mutate(Flux_CO2eq = log(Flux_CO2eq))
   #Check outlier, normality and homogeneity
-  N2O %>% group_by(Naturalization, variable) %>% identify_outliers(Flux_CO2eq)%>% filter(is.extreme == "TRUE")
-  N2O %>% group_by(Naturalization) %>% shapiro_test(Flux_CO2eq)
-  N2O %>% levene_test(Flux_CO2eq ~ Naturalization)
+  N2O %>% group_by(Chlorination, variable) %>% identify_outliers(Flux_CO2eq)%>% filter(is.extreme == "TRUE")
+  N2O %>% group_by(Chlorination) %>% shapiro_test(Flux_CO2eq)
+  N2O %>% levene_test(Flux_CO2eq ~ Chlorination)
   
   #Wilcoxon
-  res.wilcox_N2O <- wilcox_test(data = N2O, Flux_CO2eq ~ Naturalization)
+  res.wilcox_N2O <- wilcox_test(data = N2O, Flux_CO2eq ~ Chlorination)
   res.wilcox_N2O
 ```
 
@@ -990,9 +1011,9 @@ res.wilcox_N2O
 ```{r}
 ##Compare total CO2eq flux (CO2+CH4+N2O)
   #long format
-  # data_l <- data %>%  pivot_longer(-c(Pond_name, Pond_code, Season, TimeOfDay, Naturalization, Date), names_to = "variable", values_to = "Flux_CO2eq")
+  # data_l <- data %>%  pivot_longer(-c(Pond_name, Pond_code, Season, TimeOfDay, Chlorination, Date), names_to = "variable", values_to = "Flux_CO2eq")
   ##Total CO2eq
-  data_total_l <- data_l %>% group_by(Naturalization, Pond_name) %>% summarise(Total_FCO2eq = sum(Flux_CO2eq)) %>% 
+  data_total_l <- data_l %>% group_by(Chlorination, Pond_name) %>% summarise(Total_FCO2eq = sum(Flux_CO2eq)) %>% 
     ungroup()  
   #Annual mean
   data_total_l <- data_total_l %>% 
@@ -1000,13 +1021,13 @@ res.wilcox_N2O
     ungroup()
   
   #Check outlier, normality and homogeneity
-  data_total_l %>% group_by(Naturalization) %>% identify_outliers(Log_Total_FCO2eq)%>% filter(is.extreme == "TRUE")
-  data_total_l %>% group_by(Naturalization) %>% shapiro_test(Log_Total_FCO2eq)
-  data_total_l %>% drop_errors() %>% levene_test(Log_Total_FCO2eq ~ Naturalization)
+  data_total_l %>% group_by(Chlorination) %>% identify_outliers(Log_Total_FCO2eq)%>% filter(is.extreme == "TRUE")
+  data_total_l %>% group_by(Chlorination) %>% shapiro_test(Log_Total_FCO2eq)
+  data_total_l %>% drop_errors() %>% levene_test(Log_Total_FCO2eq ~ Chlorination)
   
 
   ##Wilcoxon (U man whitney)
-  res.wilcox_TF <- wilcox_test(data = data_total_l, Log_Total_FCO2eq ~ Naturalization)
+  res.wilcox_TF <- wilcox_test(data = data_total_l, Log_Total_FCO2eq ~ Chlorination)
   res.wilcox_TF
   
 ```
@@ -1014,7 +1035,7 @@ res.wilcox_N2O
 ### Summary
 ```{r }
 ##Summary
-  data_total_l %>% group_by(Naturalization) %>% 
+  data_total_l %>% group_by(Chlorination) %>% 
     summarise(Median = median(Total_FCO2eq, na.rm = T),
               Min = min(Total_FCO2eq, na.rm = T),
               Max = max(Total_FCO2eq, na.rm = T),
@@ -1022,7 +1043,7 @@ res.wilcox_N2O
               Q3 = quantile(Total_FCO2eq, na.rm = T, probs = 0.75),
               IQR = IQR(Total_FCO2eq, na.rm = T),
               Mean = mean(Total_FCO2eq, na.rm = T))
-  data_l %>% group_by(variable, Naturalization) %>% 
+  data_l %>% group_by(variable, Chlorination) %>% 
     summarise(Median = median(Flux_CO2eq, na.rm = T),
               Min = min(Flux_CO2eq, na.rm = T),
               Max = max(Flux_CO2eq, na.rm = T),
@@ -1031,13 +1052,13 @@ res.wilcox_N2O
               IQR = IQR(Flux_CO2eq, na.rm = T),
               Mean = mean(Flux_CO2eq, na.rm = T))
   
-  #% calculate per pond and summarise by Naturalization
+  #% calculate per pond and summarise by Chlorination
   Contribution <- data_l %>% left_join(select(data_total_l, - Log_Total_FCO2eq)) %>% 
     rowwise() %>% 
     mutate(Per_contribution = Flux_CO2eq/Total_FCO2eq*100) %>% 
     ungroup()
   
-  Contribution %>% group_by(variable, Naturalization) %>% 
+  Contribution %>% group_by(variable, Chlorination) %>% 
     summarise(Median = median(Per_contribution, na.rm = T),
               Min = min(Per_contribution, na.rm = T),
               Max = max(Per_contribution, na.rm = T),
@@ -1074,14 +1095,14 @@ res.wilcox_N2O
   print("Total")
   res.wilcox_TF
   print("Summary")
-  data_total_l %>% group_by(Naturalization) %>% 
+  data_total_l %>% group_by(Chlorination) %>% 
     summarise(Median = median(Total_FCO2eq, na.rm = T),
               Min = min(Total_FCO2eq, na.rm = T),
               Max = max(Total_FCO2eq, na.rm = T),
               Q1 = quantile(Total_FCO2eq, na.rm = T, probs = 0.25),
               Q3 = quantile(Total_FCO2eq, na.rm = T, probs = 0.75),
               IQR = IQR(Total_FCO2eq, na.rm = T))
-  data_l %>% group_by(variable, Naturalization) %>% 
+  data_l %>% group_by(variable, Chlorination) %>% 
     summarise(Median = median(Flux_CO2eq, na.rm = T),
               Min = min(Flux_CO2eq, na.rm = T),
               Max = max(Flux_CO2eq, na.rm = T),
@@ -1089,7 +1110,7 @@ res.wilcox_N2O
               Q3 = quantile(Flux_CO2eq, na.rm = T, probs = 0.75),
               IQR = IQR(Flux_CO2eq, na.rm = T))
   print("ContributionPercentage")
-  Contribution %>% group_by(variable, Naturalization) %>% 
+  Contribution %>% group_by(variable, Chlorination) %>% 
     summarise(Median = median(Per_contribution, na.rm = T),
               Min = min(Per_contribution, na.rm = T),
               Max = max(Per_contribution, na.rm = T),
@@ -1121,6 +1142,8 @@ res.wilcox_N2O
 
 #Import data
 data <- read_csv("rawdata/Ponds_GHG_EnvironmentalVars.csv")
+data <- data %>%
+    mutate(Chlorination = fct_relevel(Chlorination, "Yes", "No"))
 
 #Day data
 data <- data %>% filter(TimeOfDay == "Day")
@@ -1133,7 +1156,7 @@ data <- data %>% filter(TimeOfDay == "Day")
   data <- data %>% mutate(across(where(is.numeric), ~case_when(. == 0 ~ NA,
                                                                                      TRUE ~ .)))
   #Select variable included in the table
-  data_comparison <- data %>% select(Pond_name, Season, Naturalization, DO_mgL, DO_perc, Conductivity_uScm, pH, Temp_C,
+  data_comparison <- data %>% select(Pond_name, Season, Chlorination, DO_mgL, DO_perc, Conductivity_uScm, pH, Temp_C,
                                      Chla_ugL, Pheo_ugL, Perc_SubsurfaceCover, Perc_SurfaceCover,
                                      DOC_mgL, TDN_mgL, TP_mgL,
                                      Cl_mgL, SO4_mgL, NO3_mgL,
@@ -1148,7 +1171,7 @@ data <- data %>% filter(TimeOfDay == "Day")
 
 ##Longformat data
   Data_comparison_l <- data_trans %>%
-    pivot_longer(-c(Pond_name, Naturalization, Season), names_to =  "Var")
+    pivot_longer(-c(Pond_name, Chlorination, Season), names_to =  "Var")
   
 ##Check assumptions----
  #I'm going to apply linear mixed models so the assumption should be check it after model fitting
@@ -1161,7 +1184,7 @@ data <- data %>% filter(TimeOfDay == "Day")
     print(i)
     #i <- Vars[26]
     data_model <- Data_comparison_l %>% filter(Var == i) %>% drop_na()
-    model <- lmer(value ~ Naturalization + (1 | Pond_name) + (1 | Season), data = data_model)
+    model <- lmer(value ~ Chlorination + (1 | Pond_name) + (1 | Season), data = data_model)
     models[[length(models) + 1]] <- model
   }
   names(models) <- Vars
@@ -1186,7 +1209,7 @@ data <- data %>% filter(TimeOfDay == "Day")
   fitted_values_l <- fitted_values %>% pivot_longer(-rowname, names_to = "Variable", values_to  = "Fitted")
   data_check <- left_join(residuos_l, fitted_values_l)
   
-  data_table <- data %>% select(Pond_name, Season, Naturalization, DO_mgL, DO_perc, Conductivity_uScm, pH, Temp_C,
+  data_table <- data %>% select(Pond_name, Season, Chlorination, DO_mgL, DO_perc, Conductivity_uScm, pH, Temp_C,
                                 Chla_ugL, Pheo_ugL, Perc_SubsurfaceCover, Perc_SurfaceCover,
                                 DOC_mgL, TDN_mgL, TP_mgL,
                                 Cl_mgL, SO4_mgL, NO3_mgL,
@@ -1195,7 +1218,7 @@ data <- data %>% filter(TimeOfDay == "Day")
                                 volume_m3, Surface_m2, Depth)
   
   Data_l <- data_table %>%
-    pivot_longer(-c(Pond_name, Naturalization, Season), names_to =  "Var")
+    pivot_longer(-c(Pond_name, Chlorination, Season), names_to =  "Var")
   ##Surface and volume=====
         #For surface and volume i can't use repeatd data, i select just one season and apply t.test
         #Select just surface and volume
@@ -1204,15 +1227,15 @@ data <- data %>% filter(TimeOfDay == "Day")
         #Transform data to meet assumptions
         data_SV <- data_SV %>% mutate(value = log(value))
         #Check extreme outliers
-        data_SV %>% group_by(Naturalization, Var) %>% identify_outliers(value) %>% filter(is.extreme == "TRUE")
+        data_SV %>% group_by(Chlorination, Var) %>% identify_outliers(value) %>% filter(is.extreme == "TRUE")
         #Check normality
-        data_SV %>% group_by(Naturalization, Var) %>% shapiro_test(value)
+        data_SV %>% group_by(Chlorination, Var) %>% shapiro_test(value)
         #Check homogeneity
         data_SV %>%
           group_by(Var) %>%
-          levene_test(value ~ Naturalization)
+          levene_test(value ~ Chlorination)
         #Now t.test
-        pvalue_SV <- data_SV %>%  group_by(Var) %>% t_test(value ~ Naturalization) %>% rename(pvalue = p) %>% 
+        pvalue_SV <- data_SV %>%  group_by(Var) %>% t_test(value ~ Chlorination) %>% rename(pvalue = p) %>% 
           select(Var, pvalue)
         #Join to the others pvalues
         pvalues <- pvalues %>% filter(!Var %in% c("Surface_m2", "volume_m3")) %>% bind_rows(pvalue_SV)
@@ -1223,21 +1246,21 @@ data <- data %>% filter(TimeOfDay == "Day")
         #Transform data to meet assumptions
         data_D <- data_D %>% mutate(value = log(value))
         #Check extreme outliers
-        data_D %>% group_by(Naturalization, Var) %>% identify_outliers(value) %>% filter(is.extreme == "TRUE")
+        data_D %>% group_by(Chlorination, Var) %>% identify_outliers(value) %>% filter(is.extreme == "TRUE")
         #Check normality
-        data_D %>% group_by(Naturalization, Var) %>% shapiro_test(value)
+        data_D %>% group_by(Chlorination, Var) %>% shapiro_test(value)
         #Check homogeneity
         data_D %>%
           group_by(Var) %>%
-          levene_test(value ~ Naturalization)
+          levene_test(value ~ Chlorination)
         #Now t.test
-        pvalue_D <- data_D %>%  group_by(Var) %>% wilcox_test(value ~ Naturalization) %>% rename(pvalue = p) %>% 
+        pvalue_D <- data_D %>%  group_by(Var) %>% wilcox_test(value ~ Chlorination) %>% rename(pvalue = p) %>% 
           select(Var, pvalue)
         #Join to the others pvalues
         pvalues <- pvalues %>% filter(!Var %in% c("Depth")) %>% bind_rows(pvalue_D)
         
   
-  Tabla_Results <- Data_l %>% group_by(Naturalization, Var) %>% 
+  Tabla_Results <- Data_l %>% group_by(Chlorination, Var) %>% 
     summarise(Mean = mean(value, na.rm = T),
               Sd = sd(value, na.rm = T),
               Median = median(value, na.rm = T),
@@ -1260,8 +1283,8 @@ data <- data %>% filter(TimeOfDay == "Day")
                                                  Var %in% Chemical ~ "Chemical"))
   
   #Arrange by category and reorder by column
-  Tabla_Results <- Tabla_Results %>% arrange(Naturalization, Category) %>% 
-    relocate(Naturalization, Category, Var, pvalue, Mean, Sd, Median, Q1, Q3, Min, Max)
+  Tabla_Results <- Tabla_Results %>% arrange(Chlorination, Category) %>% 
+    relocate(Chlorination, Category, Var, pvalue, Mean, Sd, Median, Q1, Q3, Min, Max)
   
 ```
 
